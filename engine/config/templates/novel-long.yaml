@@ -1,0 +1,212 @@
+# novel-long.yaml — 长篇小说模板（005 需求1；2026-09-26 完善态设计，去 skeleton）
+# 长篇特点：分卷分章推进、连贯性档案（人物/设定/伏笔簿）贯穿全程。
+# 实例语义：一实例=一卷/一批章节（max_iterations 200 支持多章循环）；
+#   连贯性档案落写作项目目录 Wechat-project/<项目名>/bible/，跨实例持久。
+# 三档案（人物/设定/伏笔）随章更新 = revision-continuity + character-management +
+#   worldbuilding + series-continuity 方法（story-skills 家族，MIT，已过 gate）。
+name: novel-long
+title: "长篇小说写作流水线"
+description: >-
+  长篇小说连载模板：核心创意 → 设定集 → 分卷大纲 → 卷纲门 → 逐章写作 →
+  连贯性审 → 逻辑审 → 章末门 → 归档 → 收官门。核心机制：人物/设定/伏笔
+  三档案随章更新，跨章连贯性机器+人工双查；档案与成品持久落写作项目目录。
+max_iterations: 200
+
+decision_defaults:
+  nl_gate_outline: A
+
+steps:
+  # ---- S0 核心创意（端木）----
+  - id: nl_premise
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      核心创意（story-premise-workshop 方法）：一句话卖点 + 题材定位
+      （story-genre-craft：类型读者期待什么）+ 冲突内核 + 长篇引擎
+      （什么矛盾能撑多卷不塌）。已有项目续卷时：先读项目目录 bible/
+      下三档案与既有卷纲，只写本卷增量创意，禁止重立世界观。
+      产物 slug 含 nl-premise。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-nl-premise*.md"
+    next: nl_bible
+
+  # ---- S1 设定集/三档案（雅典娜）----
+  - id: nl_bible
+    type: dispatch
+    assignee: athena
+    description: >-
+      设定集（worldbuilding + character-management 方法）：世界观/力量或
+      社会体系/主要人物小传（欲望-恐惧-秘密-说话方式）/时间线。落盘
+      Wechat-project/novel-long/<小说名>/bible/（world.md /
+      characters.md / timeline.md / foreshadow.md 四档案；小说名取自
+      nl_premise 产物；续卷项目=增量更新不重建）。
+      产物 slug 含 nl-bible，报告列档案路径与本卷变更点。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-nl-bible*.md"
+    next: nl_outline
+
+  # ---- S2 分卷大纲（端木）----
+  - id: nl_outline
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      分卷大纲（plot-structure 方法）：本卷目标/章节梗概（每章：事件+
+      章末钩子+字数预算 3千-6千）/关键转折点/伏笔布点表（新埋哪些、
+      本卷回收哪些，与 bible/foreshadow.md 对齐）。产物 slug 含 nl-outline。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-nl-outline*.md"
+    next: nl_gate_outline
+
+  - id: nl_gate_outline
+    type: decision
+    question: "卷纲拍板：通过开写本章；驳回退回大纲"
+    context_files:
+      - "./exchange/artifacts/*-nl-outline*.md"
+    options:
+      - {key: A, label: "卷纲通过，开写", next: nl_write}
+      - {key: 同意, label: "卷纲通过，开写", next: nl_write}
+      - {key: B, label: "驳回重做", next: nl_outline}
+    on_reject: nl_outline
+    next: nl_write
+
+  # ---- S3 逐章写作（端木）----
+  - id: nl_write
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      逐章写作（chapter-writing + scene-craft 方法）：按本章梗概成文
+      （字数预算 ±20%），写前必读 bible/ 三档案与前章末尾（衔接纪律）；
+      写完同步更新三档案（人物状态变化/新设定事实/伏笔埋设与回收，
+      revision-continuity 方法）——档案更新是本章 done 的一部分，禁止
+      「正文交了档案回头补」。产物 slug 含 nl-chapter（文件名带章号）。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-nl-chapter*.md"
+    slug: nl-chapter
+    next: nl_review
+
+  # ---- S4 连贯性审（玄武）----
+  - id: nl_review
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      连贯性审（series-continuity 方法）：对照 bible/ 三档案逐条核对——
+      人物言行与人设一致（说话方式/知识边界/动机）、设定遵守（世界观
+      规则无自相矛盾）、伏笔账本（该回收未回收/未埋先收）、时间线与
+      前章衔接。出问题清单（每条带章内位置+档案依据）。产物 nl-review
+      frontmatter 契约字段 audit_result: approved|changes_requested。
+      FAIL→打回 nl_write。产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-nl-review*.md"
+    slug: nl-review
+    verdict_consume:
+      field: audit_result
+      pass_value: approved
+      on_reject: nl_write
+    max_retry: 2
+    next: nl_logic
+
+  # ---- S5 叙事逻辑审（hermes）----
+  - id: nl_logic
+    type: dispatch
+    assignee: default
+    description: >-
+      叙事逻辑审（hermes-logic-review skill 创作适配）：L1 本章在卷内
+      的功能（推进了什么，删掉本章卷纲是否塌）、L2 章内动机链与场景
+      因果自洽、L3 情节逻辑（巧合是否过量/机械降神/信息不对称处理
+      是否公平）。只审逻辑不动文风与连贯性档案（档案归 nl_review）。
+      产物 nl-logic frontmatter 契约字段 logic_result:
+      approved|changes_requested。FAIL→打回 nl_write。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-nl-logic*.md"
+    slug: nl-logic
+    verdict_consume:
+      field: logic_result
+      pass_value: approved
+      on_reject: nl_write
+    max_retry: 2
+    next: nl_gate_final
+
+  # ---- 门3：本章定稿拍板（user 专属，永不默认）----
+  - id: nl_gate_final
+    type: decision
+    question: "本章定稿拍板：连贯性审+逻辑审 verdict 已齐。A=通过归档（本卷未完则回 nl_write 写下一章）；C|意见=带意见返工；B=驳回重写"
+    context_files:
+      - "./exchange/verdicts/*-nl-review*.md"
+      - "./exchange/verdicts/*-nl-logic*.md"
+    options:
+      - {key: A, label: "本章定稿，进归档", next: nl_archive}
+      - {key: 同意, label: "本章定稿，进归档", next: nl_archive}
+      - {key: N, label: "本章定稿，继续写下一章", next: nl_write}
+      - {key: C, label: "带修改意见返工（决策文件写 C|意见）", next: nl_write}
+      - {key: B, label: "驳回重写", next: nl_write}
+    on_reject: nl_write
+    next: nl_archive
+
+  # ---- S6 本章归档（精卫）----
+  # 2026-09-26 user 规则（长篇专版）：成果归档 Wechat-project/<模板名>/<小说名>/<小说章节名>/
+  # 小说名/章节名取自 nl_premise 产物（作品名+本章标题）；三档案 bible 落
+  # <小说名>/bible/（随小说走，跨实例续写续读）。
+  - id: nl_archive
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      本章归档：定稿章文归档到
+      Wechat-project/novel-long/<小说名>/<小说章节名>/
+      （目录逐级创建；小说名与章节名取自 nl_premise/nl_outline 产物，
+      命名用安全文件名——去非法字符，章节名带章号前缀如 03-章名；
+      内含 chapter.md 定稿 + bible 变更摘要；当期有配图则加 imgs/ 配图
+      目录整体与 sources.json 素材来源索引——引擎归档清单 ⑤⑥ 对齐，
+      016 #7）。三档案 bible 同步落
+      Wechat-project/novel-long/<小说名>/bible/（characters.md /
+      world.md / timeline.md / foreshadow.md，回读验证修改时间晚于本章
+      dispatch）。归档与模式无关（test/live 都归档）。归档后逐文件回读
+      验证实存（禁自报 done）。产物 slug 含 nl-archive，报告列归档路径
+      与本卷进度（已写章数/卷纲总章数）。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-nl-archive*.md"
+    max_retry: 2
+    next: nl_upload
+
+  # ---- S6b 上传草稿箱（精卫；模式门控由引擎机械保证）----
+  # test：引擎 MOCK 短路（*_upload 后缀规则）零触碰；live：真入草稿箱。
+  # 连载语义：每章定稿即可单独传草稿箱（一章一草稿，标题带章号）。
+  - id: nl_upload
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      上传（jingwei-wechat-upload skill）：本章定稿经 gzh-design 转微信
+      HTML（样式全内联）+ PIL 文字封面（900×383，标题带「<作品名>·第N章」）
+      → 传永久素材 → draft/add 建草稿 → 幂等查重（按章号防重）。test 模式
+      引擎自动 mock 短路；live 模式真入草稿箱，R1 绝不调群发/发布接口。
+      产物 slug 含 nl-upload。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-nl-upload*.md"
+    max_retry: 2
+    next: nl_closing_gate
+
+  # ---- 门4 收官门（user 专属）----
+  - id: nl_closing_gate
+    type: decision
+    question: "收官确认：本卷章节已归档。同意 → 本期完成；继续 → 回写作步写下一章；回退 → 退回重写"
+    options:
+      - {key: A, label: "确认收官（本卷完成）", next: nl_done}
+      - {key: 同意, label: "确认收官（本卷完成）", next: nl_done}
+      - {key: N, label: "继续写下一章", next: nl_write}
+      - {key: B, label: "回退修改", next: nl_write}
+    on_reject: nl_write
+    next: nl_done
+
+  - id: nl_done
+    type: done
+    description: "本期长篇章节流程完成"
+
+skills_map:
+  nl_premise: [{skill: story-premise-workshop, owner: duanmu}, {skill: story-genre-craft, owner: duanmu}]
+  nl_bible: [{skill: worldbuilding, owner: duanmu}, {skill: character-management, owner: duanmu}]
+  nl_outline: [{skill: plot-structure, owner: duanmu}, {skill: series-continuity, owner: duanmu}]
+  nl_write: [{skill: chapter-writing, owner: duanmu}, {skill: scene-craft, owner: duanmu}, {skill: story-voice-style, owner: duanmu}, {skill: revision-continuity, owner: duanmu}]
+  nl_review: [{skill: series-continuity, owner: duanmu}, {skill: xuanwu-content-audit, owner: xuanwu}]
+  nl_logic: [{skill: hermes-logic-review, owner: hermes}]
+  nl_upload: [{skill: jingwei-wechat-upload, owner: jingwei}, {skill: gzh-design, owner: athena}]
+
+load_classes:
+  audit:
+    deny_providers: [minimax]
+    reason: "MiniMax 1027 输出风控：审查负载上下文含违禁词样本"

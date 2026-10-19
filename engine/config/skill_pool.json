@@ -1,0 +1,809 @@
+{
+ "athena-topic-scout": {
+  "owners": [
+   "athena"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_topic"
+  ]
+ },
+ "duanmu-gzh-writer": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_write"
+  ]
+ },
+ "humanizer-zh": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_polish"
+  ]
+ },
+ "no-ai-slop": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_polish"
+  ]
+ },
+ "blog-factcheck": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_factcheck"
+  ]
+ },
+ "baokuan-title-generator": {
+  "owners": [],
+  "status": "已落盘(引擎源)",
+  "purpose": "爆款标题生成（强钩悬念型为主·大历史×辩证法换轴；engine/config/skills/ 实存，模板 skills_map 以 {skill, source: engine} 绑定）",
+  "steps": [
+   "ww_headline",
+   "fa_write",
+   "bm_write",
+   "hn_write"
+  ]
+ },
+ "xuanwu-content-audit": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_review_audit"
+  ]
+ },
+ "yuwen-publish-precheck": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_review_audit"
+  ]
+ },
+ "hermes-logic-review": {
+  "owners": [
+   "hermes"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_logic_review"
+  ]
+ },
+ "athena-article-illustrator": {
+  "owners": [
+   "athena"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_layout"
+  ]
+ },
+ "athena-gzh-typesetting": {
+  "owners": [
+   "athena"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_layout"
+  ]
+ },
+ "jingwei-wechat-upload": {
+  "owners": [
+   "jingwei"
+  ],
+  "status": "已掌握",
+  "purpose": "",
+  "steps": [
+   "ww_upload"
+  ]
+ },
+ "wewrite-topic": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "公众号选题模块：热点+垂类高频+历史表现+SEO，生成 10 个评分选题",
+  "steps": []
+ },
+ "aihot": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "AI 圈热点/日报，AI 垂类选题素材源",
+  "steps": []
+ },
+ "daily-society-politics-news-reading": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "社会政治新闻收集+辩证解读，为深度评论供料",
+  "steps": []
+ },
+ "chinese-content-reading": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "公众号（搜狗）+知乎（pyzhihu-cli）内容获取，同题他人观点搜寻",
+  "steps": []
+ },
+ "mao-dialectical-worldview": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "毛泽东唯物辩证法四层分析（历史定位→全局矛盾→细节解剖→转化趋势）",
+  "steps": []
+ },
+ "dialectical-business-reading": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "唯物辩证法做商业分析（读经典+拆案例）",
+  "steps": []
+ },
+ "hv-analysis": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "横纵分析法深度研究",
+  "steps": []
+ },
+ "critical-questioning": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "提问溯源法：从新闻表层追问到本质，写评论前多问",
+  "steps": []
+ },
+ "blind-spot-detective": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "非虚构写作盲点识别",
+  "steps": []
+ },
+ "writing-soul": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "写作魂/底层立场（为谁写、为何写、以何态度写）",
+  "steps": []
+ },
+ "duanmu-writing-style": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "端木风格：西风术×毛道辩证融合",
+  "steps": []
+ },
+ "xifeng-writing-style": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "碧树西风表达法：悬念标题+口语设问+借古喻今+反常识（**含爆款标题六类+开头公式**）",
+  "steps": []
+ },
+ "writing-craft": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "通用写作方法论：议论文「加入对话」五步 + 论证工程 + LOCK 故事结构",
+  "steps": []
+ },
+ "khazix-writer": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "卡兹克公众号长文写法",
+  "steps": []
+ },
+ "opencode": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "熟练备用",
+  "purpose": "❌ 未装",
+  "steps": []
+ },
+ "gzh-design": {
+  "owners": [
+   "athena"
+  ],
+  "status": "已掌握",
+  "purpose": "排版引擎上游本体：6 主题组件库（摸鱼绿/红白/石墨极简/留白禅意/摸鱼票据/橄榄手记）+ theme-index 单一来源 + 主题生成器",
+  "steps": []
+ },
+ "xiaowan-wechat-layout-lite": {
+  "owners": [
+   "athena"
+  ],
+  "status": "需学习",
+  "purpose": "长文内容逻辑诊断 + 视觉偏好梳理 + 个人排版 SOP 沉淀（底层依赖 gzh-design）",
+  "steps": []
+ },
+ "md2wechat": {
+  "owners": [
+   "athena"
+  ],
+  "status": "需学习",
+  "purpose": "MD→微信 HTML CLI + 封面/信息图生成 + 标题建议 + humanize，多 provider",
+  "steps": []
+ },
+ "creative/humanizer": {
+  "owners": [
+   "athena"
+  ],
+  "status": "备用",
+  "purpose": "英文去 AI 味",
+  "steps": []
+ },
+ "empathetic-design": {
+  "owners": [
+   "athena"
+  ],
+  "status": "已掌握",
+  "purpose": "NVC 共情 + 用户感受体察，用于选题预判读者痛点",
+  "steps": []
+ },
+ "systems-thinking-for-product-design": {
+  "owners": [
+   "athena"
+  ],
+  "status": "已掌握",
+  "purpose": "系统思维 12 杠杆点，用于文章立意找深层结构",
+  "steps": []
+ },
+ "product-teardown-study": {
+  "owners": [
+   "athena"
+  ],
+  "status": "已掌握",
+  "purpose": "产品三层拆解法，服务\"产品拆解\"类选题",
+  "steps": []
+ },
+ "cross-disciplinary-design": {
+  "owners": [
+   "athena"
+  ],
+  "status": "备用",
+  "purpose": "多模型思维解设计问题",
+  "steps": []
+ },
+ "athena-self": {
+  "owners": [
+   "athena"
+  ],
+  "status": "已掌握",
+  "purpose": "自我能力边界认知",
+  "steps": []
+ },
+ "legal-article-retrieval": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "法条/案例检索六阶段：法源位阶→体系/关键词/案例倒查→效力甄别→涵摄检验→报告呈现",
+  "steps": []
+ },
+ "legal-norm-validity-check": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "时间效力/层级效力/冲突三维核验，防引已废止条文",
+  "steps": []
+ },
+ "case-retrieval": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "类案/裁判规则检索（法宝案例库关键词 + 语义双通道）",
+  "steps": []
+ },
+ "legal-case-analysis": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "需学习",
+  "purpose": "7 类原子能力串场 + 法宝取证，出案件综合分析草稿",
+  "steps": []
+ },
+ "legal-terminology": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "需学习",
+  "purpose": "法律术语准确使用（审稿口径统一）",
+  "steps": []
+ },
+ "other-legal-retrieval": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "备用",
+  "purpose": "立法背景/部门规章起草说明/**政策解读**/白皮书/执法检查报告",
+  "steps": []
+ },
+ "internal-compliance-risk-identification": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "备用",
+  "purpose": "企业合规体系缺漏/流程缺陷/数据隐私",
+  "steps": []
+ },
+ "legal-risk-assessment": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "备用",
+  "purpose": "监管处罚风险四维（资质/法规/历史处罚）",
+  "steps": []
+ },
+ "dispute-and-performance-risk": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "备用",
+  "purpose": "合同违约/纠纷风险",
+  "steps": []
+ },
+ "coding-agent-delegation": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "池内唯一通用：批处理/数据整理/长任务外包 qwen-code / codex / zcode",
+  "steps": []
+ },
+ "exchange-verification": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "对等 agent 修复的端到端复验",
+  "steps": []
+ },
+ "kanban-collaboration-patterns": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "卡/assignee/验收流",
+  "steps": []
+ },
+ "handoff-doc-writing": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "跨会话交接",
+  "steps": []
+ },
+ "review/argument-evaluation-framework": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "备用",
+  "purpose": "论证质量评估（正本合同审用）",
+  "steps": []
+ },
+ "finding-vs-action-triage": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "备用",
+  "purpose": "侦察发现的分级（评估项 vs 真修复）",
+  "steps": []
+ },
+ "tri-inspection-routine": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "备用",
+  "purpose": "定时巡检 SOP",
+  "steps": []
+ },
+ "pkulaw-law-search": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "熟练备用",
+  "purpose": "/mcp-law-search-service",
+  "steps": []
+ },
+ "pkulaw-law-keyword": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "熟练备用",
+  "purpose": "/mcp-law",
+  "steps": []
+ },
+ "pkulaw-law-item-keyword": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "熟练备用",
+  "purpose": "/mcp-fatiao",
+  "steps": []
+ },
+ "pkulaw-law-recognition": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "熟练备用",
+  "purpose": "/law_recognition",
+  "steps": []
+ },
+ "pkulaw-case-keyword": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "熟练备用",
+  "purpose": "/mcp-case",
+  "steps": []
+ },
+ "pkulaw-case-semantic-search": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "熟练备用",
+  "purpose": "/mcp-case-search-service",
+  "steps": []
+ },
+ "pkulaw-case-number-recognition": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "熟练备用",
+  "purpose": "/case_number_recognition",
+  "steps": []
+ },
+ "pkulaw-doc-link": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "熟练备用",
+  "purpose": "/add-doc-link",
+  "steps": []
+ },
+ "web-research": {
+  "owners": [
+   "jingwei",
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "通用：多源检索+综合，素材搜集/同题观点搜寻/资料核查皆可用",
+  "steps": [
+   "ww_mat_group",
+   "ww_topic"
+  ]
+ },
+ "background-research": {
+  "owners": [
+   "jingwei"
+  ],
+  "status": "已掌握",
+  "purpose": "通用：高信任源/委派后台调研，API事实与文档核查",
+  "steps": [
+   "ww_mat_group",
+   "ww_factcheck"
+  ]
+ },
+ "grounded-citations": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "备用",
+  "purpose": "通用：引用溯源落地，答案/文稿与可验证来源绑定（factcheck 辅助）",
+  "steps": [
+   "ww_factcheck"
+  ]
+ },
+ "verification-before-completion": {
+  "owners": [
+   "hermes"
+  ],
+  "status": "已掌握",
+  "purpose": "通用：交付前先验证再报完成（防自报与磁盘脱节，玄武两轮实证教训）",
+  "steps": []
+ },
+ "deep-troubleshooting-methodology": {
+  "owners": [
+   "hermes"
+  ],
+  "status": "已掌握",
+  "purpose": "通用：疑难故障根因排查法（实例卡死/派工堵点/服务异常）",
+  "steps": []
+ },
+ "local-book-reading-notes": {
+  "owners": [
+   "hermes"
+  ],
+  "status": "备用",
+  "purpose": "通用：PDF/epub 书籍转结构化精读笔记——读书观影/历史讲述模板的核心素材能力",
+  "steps": []
+ },
+ "sw-workflow": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "剧本项目主线调度：阶段路由 + story-bible 状态存档（术语锚 terms.md）",
+  "steps": [
+   "sc_logline"
+  ]
+ },
+ "sw-premise-theme": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "logline/主题命题/类型体量工作单（麦基前提法）",
+  "steps": [
+   "sc_logline"
+  ]
+ },
+ "sw-story-structure": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "三幕/序列结构：激励事件/转折点/中点/高潮定位",
+  "steps": [
+   "sc_structure",
+   "sc_outline"
+  ]
+ },
+ "sw-character-conflict": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "人物与冲突设计：欲望/阻力/人物弧光",
+  "steps": [
+   "sc_structure"
+  ]
+ },
+ "sw-scene-craft": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "场景技法：节拍/文本潜台词/道具/悬念延宕/进出场",
+  "steps": [
+   "sc_outline",
+   "sc_scenebreak"
+  ]
+ },
+ "sw-dialogue": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "对白技法：人物声口区分/潜台词/场景类型",
+  "steps": [
+   "sc_dialogue"
+  ]
+ },
+ "sw-format-adaptation": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "剧本格式契约：中文场号制/Fountain/V.O./CONT'D + 改编法",
+  "steps": [
+   "sc_dialogue",
+   "sc_review"
+  ]
+ },
+ "plot-structure": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "情节弧/转折点/伏笔追踪/节奏（书级pacing）",
+  "steps": [
+   "ns_outline",
+   "nl_outline",
+   "hn_outline"
+  ]
+ },
+ "scene-craft": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "场景写作：单场冲突/钩子/价值转折",
+  "steps": [
+   "ns_outline",
+   "nl_write"
+  ]
+ },
+ "chapter-writing": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "章节成文流程与纪律",
+  "steps": [
+   "ns_write",
+   "nl_write"
+  ]
+ },
+ "line-editing": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "逐行打磨：语言密度/对话真实感/感官细节",
+  "steps": [
+   "ns_polish"
+  ]
+ },
+ "series-continuity": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "系列连贯性：canon 一致/系列圣经/跨卷设定",
+  "steps": [
+   "nl_outline",
+   "nl_review"
+  ]
+ },
+ "revision-continuity": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "修订连贯性：改稿后设定/伏笔账本同步",
+  "steps": [
+   "nl_write"
+  ]
+ },
+ "character-management": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "人物档案：欲望-恐惧-秘密-声口/状态追踪",
+  "steps": [
+   "nl_bible"
+  ]
+ },
+ "worldbuilding": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "世界观构建：体系/规则/时间线档案",
+  "steps": [
+   "nl_bible"
+  ]
+ },
+ "story-premise-workshop": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "立意工作坊：核心冲突/结局锚点/一页梗概",
+  "steps": [
+   "ns_premise",
+   "nl_premise"
+  ]
+ },
+ "story-theme-craft": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "主题命题设计（这篇在问什么）",
+  "steps": [
+   "ns_premise"
+  ]
+ },
+ "story-voice-style": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "文风定调与全篇一致性纪律",
+  "steps": [
+   "ns_write",
+   "nl_write"
+  ]
+ },
+ "story-genre-craft": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "类型写作：类型读者期待/惯例与突破",
+  "steps": [
+   "ns_premise",
+   "nl_premise"
+  ]
+ },
+ "story-research": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "虚构研究：素材搜集为故事服务（frontmatter 已改名避撞键）",
+  "steps": []
+ },
+ "story-discovery-drafting": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "探索式初稿：允许糙、禁止停笔",
+  "steps": [
+   "ns_write"
+  ]
+ },
+ "story-maintenance": {
+  "owners": [
+   "duanmu"
+  ],
+  "status": "已掌握",
+  "purpose": "长篇档案维护 CLI（user拍板B强装：REJECT/80系story.js功能自洽，2026-09-26）",
+  "steps": []
+ },
+ "earnings-recap": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "财报实际vs预期/EPS惊喜/股价反应分析方法（yfinance）",
+  "steps": [
+   "fa_data"
+  ]
+ },
+ "yfinance-data": {
+  "owners": [
+   "xuanwu"
+  ],
+  "status": "已掌握",
+  "purpose": "Yahoo Finance 数据获取（user拍板A强装：CAUTION/20系pip自动安装，2026-09-26）",
+  "steps": []
+ }
+}

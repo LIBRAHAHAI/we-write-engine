@@ -1,0 +1,43 @@
+# discipline_rules.yaml — 写作纪律规则集（单一事实源，T5 + M2/Δ4）
+# 机器可查项：agent 署名 / 定位元话语 / 字数下限 / 写前越界词 / L1' 四类词库
+# 改规则或词库必跑样本稿回归集（tests/fixtures/ + test_discipline.py）
+# 验收硬标准：违规样本 100% 拦截、干净稿零误报。
+
+# 写前检查：输入选题/素材不得包含的越界词（违禁/敏感预置，具体执行由玄武审把关，此处为机械层）
+precheck_terms:
+  - 赌博网站
+  - 迷药制作
+  - 恐吓勒索
+
+# 审后正则：成稿不得命中的模式（违规即拦截打回）
+forbidden_patterns:
+  - name: agent署名
+    pattern: "(作为.{0,6}(AI|人工智能|语言模型|助手)|我是(赫尔墨斯|雅典娜|端木|玄武|精卫)|AI(生成|创作)的(文章|内容)|由AI(生成|撰写))"
+  - name: 定位元话语
+    pattern: "(根据(我们的|既定)?定位|本(文|篇)(遵循|按照)(定位|风格要求)|符合(公众号|产品)定位|应(用户|user)要求(我|按))"
+  - name: 流程元话语
+    pattern: "(以下是(我|为)你(生成|撰写|准备)的|已(按|遵照)(大纲|素材|要求)完成|本稿(基于|依据)(素材|选材))"
+
+# L1' 引擎补充词库（M2/Δ4：wordscheck 零覆盖四类；词条精确/包含匹配+豁免语法，
+# 词库文件在 engine/config/wordlists/，一行一词条，# 注释，`词条|豁免上下文`）
+# G4/023（013 R6 兜底）：四词库先 severity=warn 试运行一轮实例，误报面收敛后再升 block。
+wordlist_rules:
+  - name: 广告法绝对化用语
+    wordlist: ad_law.txt
+    severity: warn
+    message: "广告法绝对化用语（wordscheck 零覆盖，L1' 引擎补充词库命中）"
+  - name: 医疗违规表述
+    wordlist: medical.txt
+    severity: warn
+    message: "医疗违规（疗效断言/处方药推荐等，L1' 引擎补充词库命中）"
+  - name: 金融违规表述
+    wordlist: finance.txt
+    severity: warn
+    message: "金融违规（保本/稳赚/带单等，L1' 引擎补充词库命中）"
+  - name: 诈骗话术特征
+    wordlist: fraud.txt
+    severity: warn
+    message: "诈骗话术特征（刷单/转账诱导等，L1' 引擎补充词库命中）"
+
+# 字数下限（去 markdown 符号后正文长度）
+min_chars: 1200

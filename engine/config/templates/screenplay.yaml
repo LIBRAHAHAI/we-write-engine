@@ -1,0 +1,231 @@
+# screenplay.yaml — 编剧模板（005 需求1；2026-09-26 完善态设计，去 skeleton）
+# 创作方法论 skill：sw-* 家族（jtydhr88/screenwriting-skills，MIT，中文原生，
+# 麦基/菲尔德/特鲁比/陆军等体系；2026-09-26 过 install-gate 装入 duanmu，
+# sw-workflow 自带 terms.md 术语锚定 + reference.md 工作单）。
+# 输出格式：sw-format-adaptation 含机器可写契约（Fountain + 中文场号制），
+#   格式审照该契约逐项核对。
+# 收官=成品归档到写作项目目录，不走公众号上传。
+name: screenplay
+title: "剧本写作流水线"
+description: >-
+  编剧模板：以标准剧本格式产出（场次/动作/对白）。logline → 故事结构 →
+  结构门 → 分场大纲 → 场次分解 → 对白成稿 → 格式审 → 逻辑审 → 终稿门 →
+  归档 → 收官门。术语锚定 sw-workflow/terms.md，输出语言=中文。
+max_iterations: 100
+
+decision_defaults:
+  sc_gate_structure: A
+
+steps:
+  # ---- S0 logline 与主题（端木）----
+  - id: sc_logline
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      logline 与主题（sw-premise-theme 方法）：一句话故事（主人公+欲望+
+      阻力+风险）+ 主题命题（这个剧本在辩什么）+ 类型定位与体量
+      （短片/单集/电影；体量决定场次数预算）。填写 sw-premise-theme
+      reference.md 工作单。产物 slug 含 sc-logline。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-sc-logline*.md"
+    next: sc_structure
+
+  # ---- S1 故事结构（雅典娜）----
+  - id: sc_structure
+    type: dispatch
+    assignee: athena
+    description: >-
+      故事结构（sw-story-structure 方法）：三幕/序列结构定稿——激励事件、
+      幕转折点、中点、低谷、高潮、结局锚点逐一定位；人物弧光（起点状态→
+      终点状态）与价值负荷（正负价值转换）。术语锚 sw-workflow/terms.md。
+      产物 slug 含 sc-structure。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-sc-structure*.md"
+    next: sc_gate_structure
+
+  - id: sc_gate_structure
+    type: decision
+    question: "结构拍板：通过进分场大纲；驳回退回"
+    context_files:
+      - "./exchange/artifacts/*-sc-logline*.md"
+      - "./exchange/artifacts/*-sc-structure*.md"
+    options:
+      - {key: A, label: "结构通过，进分场", next: sc_outline}
+      - {key: 同意, label: "结构通过，进分场", next: sc_outline}
+      - {key: B, label: "驳回重做", next: sc_structure}
+    on_reject: sc_structure
+    next: sc_outline
+
+  # ---- S2 分场大纲（端木）----
+  - id: sc_outline
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      分场大纲（sw-story-structure 卡片法 + sw-scene-craft 方法）：逐场
+      列表——场号/内外景/日夜间/地点/在场人物/本场目的（价值从X转到Y）/
+      与前后场的因果钩。场次总数按 sc_logline 体量预算。产物 slug 含
+      sc-outline。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-sc-outline*.md"
+    next: sc_scenebreak
+
+  # ---- S3 场次分解（雅典娜）----
+  - id: sc_scenebreak
+    type: dispatch
+    assignee: athena
+    description: >-
+      场次分解（sw-scene-craft 方法）：逐场深化——进出场点（晚进早出）、
+      节拍表（beats 递进到转折）、文本/潜台词分层（人物说的 vs 想要的）、
+      道具与细节做功点、悬念与延宕布点。「无事发生」场直接标砍或并场。
+      产物 slug 含 sc-scenebreak。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-sc-scenebreak*.md"
+    next: sc_gate_scene
+
+  - id: sc_gate_scene
+    type: decision
+    question: "分场拍板：通过进对白成稿；驳回退回场次分解"
+    context_files:
+      - "./exchange/artifacts/*-sc-outline*.md"
+      - "./exchange/artifacts/*-sc-scenebreak*.md"
+    options:
+      - {key: A, label: "分场通过，开写对白", next: sc_dialogue}
+      - {key: 同意, label: "分场通过，开写对白", next: sc_dialogue}
+      - {key: B, label: "驳回重做", next: sc_scenebreak}
+    on_reject: sc_scenebreak
+    next: sc_dialogue
+
+  # ---- S4 对白成稿（端木）----
+  - id: sc_dialogue
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      对白成稿（sw-dialogue + sw-format-adaptation 方法）：按场次分解
+      逐场成文，标准剧本格式（场次标题行/动作行/人物名+对白；中文场号制，
+      输出契约照 sw-format-adaptation 的格式元素规范：V.O./O.S./CONT'D
+      等标记使用纪律）。对白纪律：每个人物说话方式可区分、台词带潜台词
+      不直说主题、动作行写可拍摄的视觉动作不写心理形容词。
+      产物 slug 含 sc-draft。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-sc-draft*.md"
+    slug: sc-draft
+    next: sc_review
+
+  # ---- S5 格式审（玄武）----
+  - id: sc_review
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      格式审：对照 sw-format-adaptation 输出契约逐项核对——场次标题行
+      格式完整（场号/内外景/日夜间/地点）、动作行无心理描写、对白块
+      人物名规范、特殊标记（V.O./O.S./CONT'D）使用正确、场号连续无跳号。
+      问题清单每条带场号。产物 sc-review frontmatter 契约字段
+      audit_result: approved|changes_requested。FAIL→打回 sc_dialogue。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-sc-review*.md"
+    slug: sc-review
+    verdict_consume:
+      field: audit_result
+      pass_value: approved
+      on_reject: sc_dialogue
+    max_retry: 2
+    next: sc_logic
+
+  # ---- S6 逻辑审（hermes）----
+  - id: sc_logic
+    type: dispatch
+    assignee: default
+    description: >-
+      逻辑审（hermes-logic-review skill 剧本适配）：L1 主题统一（每场是否
+      在为同一个命题做功，跑题场点名）、L2 因果链（场与场的因果钩成立/
+      人物知情边界——人物不能用他没渠道知道的信息）、L3 台词潜台词检查
+      （说教台词/主题直给/人物沦为作者传声筒处点名带场号）。只审逻辑
+      不动格式（格式归 sc_review）。产物 sc-logic frontmatter 契约字段
+      logic_result: approved|changes_requested。FAIL→打回 sc_dialogue。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-sc-logic*.md"
+    slug: sc-logic
+    verdict_consume:
+      field: logic_result
+      pass_value: approved
+      on_reject: sc_dialogue
+    max_retry: 2
+    next: sc_gate_final
+
+  # ---- 门3：终稿拍板（user 专属，永不默认）----
+  - id: sc_gate_final
+    type: decision
+    question: "定稿拍板：格式审+逻辑审 verdict 已齐。A=通过进归档；C|意见=带意见返工；B=驳回退回成稿"
+    context_files:
+      - "./exchange/artifacts/*-sc-draft*.md"
+      - "./exchange/verdicts/*-sc-review*.md"
+      - "./exchange/verdicts/*-sc-logic*.md"
+    options:
+      - {key: A, label: "定稿通过，进归档", next: sc_archive}
+      - {key: 同意, label: "定稿通过，进归档", next: sc_archive}
+      - {key: C, label: "带修改意见返工（决策文件写 C|意见）", next: sc_dialogue}
+      - {key: B, label: "驳回，退回成稿", next: sc_dialogue}
+    on_reject: sc_dialogue
+    next: sc_archive
+
+  # ---- S7 成品归档（精卫）----
+  # 2026-09-26 user 规则：所有成果统一落 Wechat-project/<模板名>/<写作日期>/
+  - id: sc_archive
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      成品归档：剧本定稿+分场表+结构卡归档到
+      Wechat-project/screenplay/<写作日期YYYY-MM-DD>/<实例名>/
+      （script.md 剧本正文 / outline.md 分场表 / structure.md 结构卡；
+      剧集项目另存 story-bible.md 于同目录供续集实例续读，sw-workflow
+      会话协议；当期有配图则加 imgs/ 配图目录整体与 sources.json 素材
+      来源索引——引擎归档清单 ⑤⑥ 对齐，016 #7）。归档与模式无关
+      （test/live 都归档）。归档后逐文件回读
+      验证实存（禁自报 done）。产物 slug 含 sc-archive，报告列归档路径
+      清单。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-sc-archive*.md"
+    max_retry: 2
+    next: sc_upload
+
+  # ---- S7b 上传草稿箱（精卫；模式门控由引擎机械保证）----
+  # test：引擎 MOCK 短路（*_upload 后缀规则）零触碰；live：真入草稿箱
+  #（剧本作为公众号连载内容发布时用）。
+  - id: sc_upload
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      上传（jingwei-wechat-upload skill）：剧本定稿经 gzh-design 转微信
+      HTML（样式全内联，剧本格式保留缩进与人物名行）+ PIL 文字封面
+      （900×383）→ 传永久素材 → draft/add 建草稿 → 幂等查重。test 模式
+      引擎自动 mock 短路；live 模式真入草稿箱，R1 绝不调群发/发布接口。
+      产物 slug 含 sc-upload。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-sc-upload*.md"
+    max_retry: 2
+    next: sc_closing_gate
+
+  # ---- 门4 收官门（user 专属）----
+  - id: sc_closing_gate
+    type: decision
+    question: "收官确认：成品已归档。同意 → 本期完成；回退 → 退回成稿"
+    options:
+      - {key: A, label: "确认收官", next: sc_done}
+      - {key: 同意, label: "确认收官", next: sc_done}
+      - {key: B, label: "回退修改", next: sc_dialogue}
+    on_reject: sc_dialogue
+    next: sc_done
+
+  - id: sc_done
+    type: done
+    description: "本期剧本流程完成"
+
+skills_map:
+  sc_logline: [{skill: sw-premise-theme, owner: duanmu}, {skill: sw-workflow, owner: duanmu}]
+  sc_structure: [{skill: sw-story-structure, owner: duanmu}, {skill: sw-character-conflict, owner: duanmu}]
+  sc_outline: [{skill: sw-story-structure, owner: duanmu}, {skill: sw-scene-craft, owner: duanmu}]
+  sc_scenebreak: [{skill: sw-scene-craft, owner: duanmu}]
+  sc_dialogue: [{skill: sw-dialogue, owner: duanmu}, {skill: sw-format-adaptation, owner: duanmu}]
+  sc_review: [{skill: sw-format-adaptation, owner: duanmu}]
+  sc_logic: [{skill: hermes-logic-review, owner: hermes}]
+  sc_upload: [{skill: jingwei-wechat-upload, owner: jingwei}, {skill: gzh-design, owner: athena}]
+
+load_classes:
+  audit:
+    deny_providers: [minimax]
+    reason: "MiniMax 1027 输出风控：审查负载上下文含违禁词样本"

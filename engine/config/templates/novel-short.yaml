@@ -1,0 +1,196 @@
+# novel-short.yaml — 短篇小说模板（005 需求1；2026-09-26 完善态设计，去 skeleton）
+# 创作类模板：无事实核查路（虚构无事实主张），审查链=叙事逻辑审+合规审。
+# 收官=成品归档到写作项目目录（Wechat-project/<项目名>/），不走公众号上传。
+# 创作方法论 skill：story-skills 家族（MIT，2026-09-26 过 install-gate 装入 duanmu）。
+name: novel-short
+title: "短篇小说写作流水线"
+description: >-
+  短篇小说模板：单篇成稿（5千-2万字量级），一稿一实例。立意 → 结构 →
+  结构门 → 初稿 → 打磨 → 叙事逻辑审 → 合规审 → 终稿门 → 归档 → 收官门。
+  与长篇的区别：无分卷连载，重在一次成型的完成度。
+max_iterations: 60
+
+decision_defaults:
+  ns_gate_outline: A
+
+steps:
+  # ---- S0 立意与梗概（端木）----
+  - id: ns_premise
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      立意与梗概（story-premise-workshop 方法）：核心冲突 + 结局锚点 +
+      叙事视角 + 主题命题（story-theme-craft：这篇到底在问什么）。产出
+      一页梗概：主人公/欲望/阻力/代价/转变。产物 slug 含 ns-premise。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-ns-premise*.md"
+    next: ns_outline
+
+  # ---- S1 结构设计（雅典娜）----
+  - id: ns_outline
+    type: dispatch
+    assignee: athena
+    description: >-
+      结构设计（plot-structure + scene-craft 方法）：场景序列（每场：
+      目的/进出场价值转折/冲突升级）、节奏曲线（张弛布点）、留白点
+      （哪些不写）、视角纪律（单视角或切换规则）。场景卡逐场列出，
+      标注每场字数预算（总量 5千-2万）。产物 slug 含 ns-outline。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-ns-outline*.md"
+    next: ns_gate_outline
+
+  - id: ns_gate_outline
+    type: decision
+    question: "结构拍板：通过开写；驳回退回"
+    context_files:
+      - "./exchange/artifacts/*-ns-premise*.md"
+      - "./exchange/artifacts/*-ns-outline*.md"
+    options:
+      - {key: A, label: "结构通过，开写", next: ns_write}
+      - {key: 同意, label: "结构通过，开写", next: ns_write}
+      - {key: B, label: "驳回重做", next: ns_outline}
+    on_reject: ns_outline
+    next: ns_write
+
+  # ---- S2 初稿（端木）----
+  - id: ns_write
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      初稿（chapter-writing 方法）：按场景序列成文，遵守视角纪律；
+      对话推进冲突不做说明书（show don't tell）；文风纪律=story-voice-style
+      定调后全篇一致；字数按大纲预算 ±20%。初稿允许糙，禁止停笔 perfectionism。
+      产物 slug 含 ns-draft。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-ns-draft*.md"
+    slug: ns-draft
+    next: ns_polish
+
+  # ---- S3 打磨（雅典娜）----
+  - id: ns_polish
+    type: dispatch
+    assignee: athena
+    description: >-
+      打磨（line-editing 方法）：语言密度（删冗词/砍解释性旁白）、对话
+      真实感（每个人物说话方式可区分）、感官细节（视觉之外的听觉嗅觉
+      触觉）、结尾余味（最后一句的分量）。输出打磨稿+改动说明清单。
+      产物 slug 含 ns-polish。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-ns-polish*.md"
+    next: ns_logic
+
+  # ---- S4 叙事逻辑审（hermes）----
+  - id: ns_logic
+    type: dispatch
+    assignee: default
+    description: >-
+      叙事逻辑审（hermes-logic-review skill 创作适配）：L1 主旨（读者读完
+      能否一句话说出这篇在写什么）、L2 人物动机链自洽（每个关键行为有
+      可理解的动机，转变有铺垫）、L3 叙事逻辑（伏笔回收/时间线无矛盾/
+      结局从冲突中自然长出而非机械降神）。只审逻辑不动文风。产物
+      ns-logic frontmatter 契约字段 logic_result: approved|changes_requested。
+      FAIL→打回 ns_polish。产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-ns-logic*.md"
+    slug: ns-logic
+    verdict_consume:
+      field: logic_result
+      pass_value: approved
+      on_reject: ns_polish
+    max_retry: 2
+    next: ns_audit
+
+  # ---- S5 合规审（玄武）----
+  - id: ns_audit
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      合规审：引擎词库扫描复核 + 涉真人影射红线（人物不得可识别地指向
+      真实在世个人并加负面情节）+ 内容安全（暴力/色情尺度）。产物
+      ns-audit frontmatter 契约字段 audit_result: approved|changes_requested。
+      FAIL→打回 ns_polish。产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-ns-audit*.md"
+    slug: ns-audit
+    verdict_consume:
+      field: audit_result
+      pass_value: approved
+      on_reject: ns_polish
+    max_retry: 2
+    next: ns_gate_final
+
+  # ---- 门3：终稿拍板（user 专属，永不默认）----
+  - id: ns_gate_final
+    type: decision
+    question: "定稿拍板：叙事逻辑审+合规审 verdict 已齐。A=通过进归档；C|意见=带意见返工；B=驳回退回打磨"
+    context_files:
+      - "./exchange/artifacts/*-ns-polish*.md"
+      - "./exchange/verdicts/*-ns-logic*.md"
+      - "./exchange/verdicts/*-ns-audit*.md"
+    options:
+      - {key: A, label: "定稿通过，进归档", next: ns_archive}
+      - {key: 同意, label: "定稿通过，进归档", next: ns_archive}
+      - {key: C, label: "带修改意见返工（决策文件写 C|意见）", next: ns_polish}
+      - {key: B, label: "驳回，退回打磨", next: ns_polish}
+    on_reject: ns_polish
+    next: ns_archive
+
+  # ---- S6 成品归档（精卫）----
+  # 2026-09-26 user 规则：所有成果统一落 Wechat-project/<模板名>/<写作日期>/
+  - id: ns_archive
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      成品归档：定稿+梗概+场景卡归档到
+      Wechat-project/novel-short/<写作日期YYYY-MM-DD>/<实例名>/
+      （目录不存在则逐级创建；标配文件从简：final.md 定稿 + outline.md
+      场景卡 + premise.md 梗概；当期有配图则加 imgs/ 配图目录整体与
+      sources.json 素材来源索引——引擎归档清单 ⑤⑥ 对齐，016 #7）。
+      归档与模式无关（test/live 都归档）。
+      归档后逐文件回读验证实存（禁自报 done）。产物 slug 含 ns-archive，
+      报告列归档路径清单。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-ns-archive*.md"
+    max_retry: 2
+    next: ns_upload
+
+  # ---- S6b 上传草稿箱（精卫；模式门控由引擎机械保证）----
+  # test 模式：引擎 MOCK 短路（*_upload 后缀规则），零触碰微信 API；
+  # live 模式：真上传公众号草稿箱（R1 绝不调群发/发布接口）。
+  - id: ns_upload
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      上传（jingwei-wechat-upload skill）：定稿经 gzh-design 转微信 HTML
+      （样式全内联）+ PIL 文字封面（900×383 实测）→ 传永久素材 →
+      draft/add 建草稿 → 幂等查重。test 模式引擎自动 mock 短路（不触
+      微信 API）；live 模式真入草稿箱，R1 绝不调群发/发布接口。
+      产物 slug 含 ns-upload。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-ns-upload*.md"
+    max_retry: 2
+    next: ns_closing_gate
+
+  # ---- 门4 收官门（user 专属）----
+  - id: ns_closing_gate
+    type: decision
+    question: "收官确认：成品已归档。同意 → 本期完成；回退 → 退回打磨"
+    options:
+      - {key: A, label: "确认收官", next: ns_done}
+      - {key: 同意, label: "确认收官", next: ns_done}
+      - {key: B, label: "回退修改", next: ns_polish}
+    on_reject: ns_polish
+    next: ns_done
+
+  - id: ns_done
+    type: done
+    description: "本期短篇流程完成"
+
+skills_map:
+  ns_premise: [{skill: story-premise-workshop, owner: duanmu}, {skill: story-theme-craft, owner: duanmu}, {skill: story-genre-craft, owner: duanmu}]
+  ns_outline: [{skill: plot-structure, owner: duanmu}, {skill: scene-craft, owner: duanmu}]
+  ns_write: [{skill: chapter-writing, owner: duanmu}, {skill: story-voice-style, owner: duanmu}, {skill: story-discovery-drafting, owner: duanmu}]
+  ns_polish: [{skill: line-editing, owner: duanmu}]
+  ns_logic: [{skill: hermes-logic-review, owner: hermes}]
+  ns_audit: [{skill: xuanwu-content-audit, owner: xuanwu}, {skill: yuwen-publish-precheck, owner: xuanwu}]
+  ns_upload: [{skill: jingwei-wechat-upload, owner: jingwei}, {skill: gzh-design, owner: athena}]
+
+load_classes:
+  audit:
+    deny_providers: [minimax]
+    reason: "MiniMax 1027 输出风控：审查负载上下文含违禁词样本"

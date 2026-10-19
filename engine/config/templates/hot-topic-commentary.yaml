@@ -1,0 +1,383 @@
+# hot-topic-commentary.yaml — 热门话题评论模板（005 需求1：自 engine/pipeline.yaml 原样抽取，2026-09-15，20 节点语义零改动）
+# 本文件即原「全局单一 pipeline.yaml」；抽取后 pipeline.yaml 已退役，模板目录 engine/config/templates/ 是新的单一事实源
+# pipeline.yaml — we-write-engine 声明式流水线（单一事实源，T1 定稿）
+# 依据：exchange/charter.md §一 + 013 设计 v2（Δ3 factcheck / Δ5 verdict_gate / Δ6 skills_map owner / Δ7 禁配 / Δ8 slug_registry）
+# 口径（2026-09-14 修正）：20 节点 = 12 工作步 + 4 门 + 2 屏障 + 1 机器校验(C4) + 1 收官（分布 10/2/4/2/1/1，见 ww_panel /api/pipeline 实测分类；抽取时顺带修正本行陈旧的 8/2 口径——与 PROJECT-MEMORY 铁律1 对齐，纯注释改动）
+# 修订史：2026-09-11 拍板为 19 节点（11 工作步），后新增 ww_logic_review 逻辑审步（三审末位，hermes-logic-review）未同步本注释，2026-09-14 复核纠正为 20
+# 步骤 id 带 ww_ 前缀防撞键（002 总纲撞键教训）；assignee 必须是可 spawn 的
+# 真实 profile（default/athena/xuanwu/jingwei/duanmu）——'hermes' 是保留名
+# spawn 会被拒，executor 统一归一化为 default。
+name: we-write
+title: "we-write 公众号写作流水线（we-write-engine）"
+max_iterations: 60
+
+# D1（20260920）：拍板门保守默认（单篇提速——低风险门自动拍板，user 专属门永不默认）。
+# 消费顺位（engine._do_decision）：①<name>.decision ②<name>.defaults.json ③此处 ④阻塞等 user。
+# 20260921（user 裁定）：②③ 需实例 opt-in——面板勾选「预设默认」（写 defaults.json）
+# 或「无人值守」（写 .unattended）任一开启才自动拍；两者皆无一律停在拍板点等 user。
+# 保守裁定（待 user 复核）：仅选题/大纲两类低风险门默认 A；终稿门与收官门永不默认。
+decision_defaults:
+  ww_gate_topic: A      # 选题门：A = 选候选1（选项本义即「同意默认首选」）
+  ww_gate_outline: A    # 大纲门：A = 大纲定稿（后续事实核/三审兜底内容质量）
+
+steps:
+  # ---- S0 选题（雅典娜，五路预判）----
+  - id: ww_topic
+    type: dispatch
+    assignee: athena
+    description: "选题：三源抓取→去重→三级权重排序→产出≥5候选（含素材五路预判）。产物 slug 含 ww-topic-candidates。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    artifact: "./exchange/artifacts/*-ww-topic-candidates*.md"
+    next: ww_gate_topic
+
+  # ---- 门1：user 拍板选题 ----
+  - id: ww_gate_topic
+    type: decision
+    question: "选题拍板：从 ≥5 候选中选 1 个（回复编号 1-5，A=默认首选，重选=重新出题）"
+    context_files:
+      - "./exchange/artifacts/*-ww-topic-candidates*.md"
+    options:
+      - {key: "1", label: "选候选 1", next: ww_outline}
+      - {key: "2", label: "选候选 2", next: ww_outline}
+      - {key: "3", label: "选候选 3", next: ww_outline}
+      - {key: "4", label: "选候选 4", next: ww_outline}
+      - {key: "5", label: "选候选 5", next: ww_outline}
+      - {key: A, label: "选候选 1（同意默认首选）", next: ww_outline}
+      - {key: 重选, label: "不满意，重新出题", next: ww_topic}
+    on_reject: ww_topic
+    next: ww_outline
+
+  # ---- S1 大纲 ----
+  - id: ww_outline
+    type: dispatch
+    assignee: duanmu
+    description: "大纲：端木出主题方向/大纲初稿（矛盾分析主线）→雅典娜结构优化（钩子/节奏/相声式三段）。产物 slug 含 ww-outline。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    artifact: "./exchange/artifacts/*-ww-outline*.md"
+    next: ww_gate_outline
+
+  # ---- 门2：user 拍板大纲 ----
+  - id: ww_gate_outline
+    type: decision
+    question: "大纲拍板：同意定稿 → 进素材五路并行；驳回 → 退回重做"
+    context_files:
+      - "./exchange/artifacts/*-ww-outline*.md"
+    options:
+      - {key: A, label: "大纲定稿，进入素材阶段", next: ww_mat_group}
+      - {key: 同意, label: "大纲定稿，进入素材阶段", next: ww_mat_group}
+      - {key: B, label: "驳回重做", next: ww_outline}
+    on_reject: ww_outline
+    next: ww_mat_group
+
+  # ---- S2 素材五路并行组（dispatch_group：5 卡一次派，幂等键独立）----
+  # token 纪律（user 2026-09-13 拍板）：素材搜集必须有终止条件，禁止无休止搜集。
+  # 预算（每路）：web 检索 ≤5 轮；总时长 ≤20 分钟；素材量达标即停
+  # （达标 = ≥3 条可用素材 且 每条含 URL+可引用要点+时间戳）。
+  # 预算耗尽仍未达标 → 带缺口说明交付（列缺什么），不得继续加搜。
+  # 法律路（法宝）例外：法条原文检索按需（引用核验必需），不计轮次。
+  - id: ww_mat_group
+    type: dispatch_group
+    description: "五路素材并行派卡：新闻/历史/经典/法律/经济同时开跑（每路预算：≤5轮检索/≤20分钟/≥3条达标即停）。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    token_budget:
+      max_search_rounds: 5
+      max_minutes: 20
+      done_criteria: ">=3 条可用素材（URL+要点+时间戳齐全）"
+      on_budget_exhausted: "带缺口说明交付，禁止继续搜集"
+      exemption: "ww_mat_law 法条原文核验不计轮次"
+    members:
+      - id: ww_mat_news
+        assignee: jingwei
+        slug: ww-mat-news
+        artifact: "./exchange/artifacts/*-ww-mat-news*.md"
+      - id: ww_mat_history
+        assignee: default
+        slug: ww-mat-history
+        artifact: "./exchange/artifacts/*-ww-mat-history*.md"
+      - id: ww_mat_classic
+        assignee: athena
+        slug: ww-mat-classic
+        artifact: "./exchange/artifacts/*-ww-mat-classic*.md"
+      - id: ww_mat_law
+        assignee: xuanwu
+        slug: ww-mat-law
+        artifact: "./exchange/artifacts/*-ww-mat-law*.md"
+      - id: ww_mat_econ
+        assignee: duanmu
+        slug: ww-mat-econ
+        artifact: "./exchange/artifacts/*-ww-mat-econ*.md"
+    next: ww_mat_barrier
+
+  # 组屏障：五路产物全齐才放行（wait_escalate_max 轮后卡死告警）
+  - id: ww_mat_barrier
+    type: wait
+    description: "五路素材全部落盘（组屏障：artifacts 全齐才过）"
+    artifacts:
+      - "./exchange/artifacts/*-ww-mat-news*.md"
+      - "./exchange/artifacts/*-ww-mat-history*.md"
+      - "./exchange/artifacts/*-ww-mat-classic*.md"
+      - "./exchange/artifacts/*-ww-mat-law*.md"
+      - "./exchange/artifacts/*-ww-mat-econ*.md"
+    wait_escalate_max: 5
+    next: ww_mat_select
+
+  # ---- S3 选材 ----
+  - id: ww_mat_select
+    type: dispatch
+    assignee: duanmu
+    description: "选材定主线：读素材池五路产物，选用/拓展成写作主线（用/舍及原因）。产物 slug 含 ww-selection。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    artifact: "./exchange/artifacts/*-ww-selection*.md"
+    slug: ww-selection   # 历史契约显式豁免（013 P8：改名权在产物 owner）
+    next: ww_write
+
+  # ---- S4 写文（纪律校验前置）----
+  - id: ww_write
+    type: dispatch
+    assignee: duanmu
+    model: {provider: deepseek, model: deepseek-v4-pro}
+    description: "写文：按选材主线写全文（1500-2500字/引言+3节+结语/引用标[src:N]/术×道/相声式）。写前纪律检查 + 产物过审后正则。产物 slug 含 ww-draft。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    discipline: pre_and_post
+    max_retry: 2
+    artifact: "./exchange/artifacts/*-ww-draft*.md"
+    slug: ww-draft   # 历史契约显式豁免
+    next: ww_polish
+
+  # ---- S5 五维优化 ----
+  - id: ww_polish
+    type: dispatch
+    assignee: athena
+    model: {provider: qwen, model: qwen3.8-max}
+    description: "五维优化+去AI味：定位契合/自身定位/受众/口吻/语句 + humanizer。产物 slug 含 ww-polish。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    artifact: "./exchange/artifacts/*-ww-polish*.md"
+    next: ww_factcheck
+
+  # ---- S6b 事实核查（013 Δ3 独立执行器；load_class=audit → minimax 禁配 Δ7）----
+  - id: ww_factcheck
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      事实核查：对 ww-polish 稿全部 [src:N] 逐条四判定——①URL 可达 ②引用页含所引
+      数据/文句可定位 ③数值/年份/人名与源一致 ④时效（数据类须标时点，源发布距今
+      >24 个月现状类表述→STALE，政策法规须核现行有效版本）。可达性失败不直接 FAIL，
+      标 UNVERIFIABLE 进门3 警示清单（013 R7）。产物 ww-factcheck-report：每条 src
+      一行 {src_id, claim, source, reachable, located, value_match, data_time,
+      verdict: PASS|FAIL|STALE|UNVERIFIABLE, evidence}；frontmatter 契约字段
+      factcheck_result: approved|changes_requested。FAIL→引擎打回写文注清单；
+      超 max_retry 带警示上门3（user 终审，charter 已拍板）。
+      产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、
+      增量返工只写改动点清单（对照 fix_hint 逐条）。
+    artifact: "./exchange/artifacts/*-ww-factcheck-report*.md"
+    verdict_consume:
+      field: factcheck_result
+      pass_value: approved
+      on_reject: ww_write
+    max_retry: 2
+    next: ww_headline
+
+  # ---- S6 标题 ----
+  # D3（20260920）：gate C 返工后的复验轮只核对标题一致性，不再重新产候选
+  #（省一轮 worker token，见 ww_headline description 末句）
+  - id: ww_headline
+    type: dispatch
+    assignee: default
+    description: "标题：读优化稿产 5 候选标题（钩子类型+契合定位理由），呈 user 拍板。产物 slug 含 ww-title。若本步为 gate C 返工后的复验（history 中 ww_headline 已有 dispatch_done），仅核对标题一致性即 done，不产出新候选、不重新呈报。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    artifact: "./exchange/artifacts/*-ww-title*.md"
+    slug: ww-title   # 历史契约显式豁免
+    next: ww_dual_review
+
+  # ---- S7 双审（玄武技术+端木价值 并行）----
+  # Δ13 门序（017 verdict D1，P0）：双审必须**前移到门3 之前**——user 拍板看到的
+  # 必是机器可查项全查完的稿。旧序 headline→门3→双审 执行的正是 charter 的反面。
+  # 本顺序由 test_pipeline_schema.py::test_gate_order_* 钉死（对旧序变红）。
+  # Δ5：屏障全齐后引擎读各 verdict frontmatter audit_result，任一 changes_requested
+  # → 自动打回 ww_polish 并注入问题清单节（build_reject_body 复用）。
+  - id: ww_dual_review
+    type: dispatch_group
+    load_class: audit          # 组级标注：成员继承（ww_review_audit 禁配 minimax）
+    description: "双审并行派卡：玄武合规事实审（L1'+L1+L2+L2-Q 三层，Δ4）+ 端木价值审"
+    members:
+      - id: ww_review_audit
+        assignee: xuanwu
+        load_class: audit
+        description: >-
+          合规审三层：L1' 引擎词库扫描命中清单复核（C2 已机器跑，玄武只做误报复核+扫剩余）
+          + L1 wordscheck 仅色情类双 pass（其余五类归 L2 语义通读 + L1' 四词库兜底，
+          T-3③ 2026-09-28 拍板：六类全跑 L1 误伤率高且与 L1'/L2 职责重叠；
+          yuwen-publish-precheck 并入）+ L2 语义 18 类
+          + L2-Q 纪律四查。verdict 三段式清单，frontmatter audit_result:
+          approved|changes_requested。产物 slug 含 ww-audit-verdict。
+          产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、
+          增量返工只写改动点清单（对照 fix_hint 逐条）。
+        artifact: "./exchange/verdicts/*-ww-audit-verdict*.md"
+        slug: ww-audit-verdict
+      - id: ww_review_value
+        assignee: duanmu
+        description: >-
+          价值审：公众号定位一致性（批判片面认识立场/术道风格/年轻人解惑价值）。
+          frontmatter audit_result: approved|changes_requested。产物 slug 含 ww-value-verdict。
+          产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、
+          增量返工只写改动点清单（对照 fix_hint 逐条）。
+        artifact: "./exchange/verdicts/*-ww-value-verdict*.md"
+        slug: ww-value-verdict
+    next: ww_review_barrier
+
+  - id: ww_review_barrier
+    type: wait
+    description: "双审 verdict 全部落盘（门3 拍板的前置证据）"
+    artifacts:
+      - "./exchange/verdicts/*-ww-audit-verdict*.md"
+      - "./exchange/verdicts/*-ww-value-verdict*.md"
+    wait_escalate_max: 5
+    next: ww_logic_review
+    verdict_gate:              # Δ5：屏障全齐后引擎机器消费 verdict
+      field: audit_result
+      pass_value: approved
+      on_reject: ww_polish
+
+  # ---- S7b 逻辑审（问题清单 #4：三审末位，hermes 负责）----
+  # 立场：无前因后果的读者能否看懂主旨。三层：L1 主旨框架 / L2 层间自洽
+  # / L3 推理链（高频谬误清单）。只审逻辑不动事实（事实疑点移交 factcheck）。
+  # skill：hermes-logic-review。FAIL → 打回 ww_polish 注单。
+  - id: ww_logic_review
+    type: dispatch
+    assignee: default          # 'hermes' 是保留名，executor 归一化 default
+    description: >-
+      逻辑审（hermes-logic-review skill）：以不懂前因后果的读者视角三层检查——
+      L1 主旨与框架（主旨一句话可述/承诺-兑现/主线统一）、L2 层间与段落自洽
+      （承接转折有据/论点论据配对/MECE）、L3 推理链（高频谬误命中即注单带句位）。
+      只审逻辑不动事实。产物 ww-logic-verdict frontmatter 契约字段
+      logic_result: approved|changes_requested。FAIL→引擎打回 ww_polish；
+      max_retry=2 耗尽带警示上门3。产出纪律：产物只写结论与增量：禁止复述
+      上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）。
+    artifact: "./exchange/verdicts/*-ww-logic-verdict*.md"
+    slug: ww-logic-verdict
+    verdict_consume:
+      field: logic_result
+      pass_value: approved
+      on_reject: ww_polish
+    max_retry: 2
+    next: ww_gate_final
+
+  # ---- 门3：user 拍板终稿（正文+标题+双审+逻辑审结论）----
+  # 问题清单 #7④：新增 C 路径——拍板时把修改意见一起提出（决策文件写 `C|意见内容`），
+  # 引擎自动带意见打回 ww_polish 返工，修完再回本门确认，通过才进排版。
+  # D1（20260920）：此门永不默认（user 专属）——终稿拍板涉及 user 终审权，永不自动拍。
+  # D3：C 路径返工链（polish→factcheck→headline）中 headline 复验只核对标题一致性，
+  # 不再重新产候选（见 ww_headline description）。
+  - id: ww_gate_final
+    type: decision
+    question: "终稿拍板：双审+逻辑审 verdict 已齐。A=通过进配图排版；C|修改意见=带意见修改（返工后回本门再确认）；B=驳回，退回写文"
+    context_files:
+      - "./exchange/artifacts/*-ww-polish*.md"
+      - "./exchange/artifacts/*-ww-title*.md"
+      - "./exchange/artifacts/*-ww-factcheck-report*.md"
+      - "./exchange/verdicts/*-ww-audit-verdict*.md"
+      - "./exchange/verdicts/*-ww-value-verdict*.md"
+      - "./exchange/verdicts/*-ww-logic-verdict*.md"
+    options:
+      - {key: A, label: "终稿通过，进配图排版", next: ww_layout}
+      - {key: 同意, label: "终稿通过，进配图排版", next: ww_layout}
+      - {key: C, label: "带修改意见修改（决策文件写 C|意见），返工后回本门再确认", next: ww_polish}
+      - {key: B, label: "驳回，退回写文", next: ww_write}
+    rework_target: ww_polish    # C 路径返工靶点：五维优化步（正文+标题意见一并带上）
+    on_reject: ww_write
+    next: ww_layout
+
+  # ---- S8 配图排版（顺序：先配图后排版）----
+  - id: ww_layout
+    type: dispatch
+    assignee: athena
+    description: "配图排版：athena-article-illustrator 配图方案 + gzh-design MD→微信HTML（样式全内联）。产物 slug 含 ww-layout。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    artifact: "./exchange/artifacts/*-ww-layout*.md"
+    next: ww_cover_ai
+
+  # ---- S8b 封面 AI 出图（E1/20260920：插在排版后、渲染校验前；D5 关联注释：若再
+  # 提速，心跳 cron 周期可由 5 分钟调 3 分钟——cronjob 侧动作，不在代码范围）----
+  # 注意事项：生成图先落 exchange/artifacts/ai-cover-raw-<instance>.png（原始 AI 图
+  # 保留便于重试），文字叠加后另存最终 cover-900x383-<instance>.png（精确 900×383，
+  # PIL 实测）；ww_check_render 的 cover_spec 机器校验天然把关 AI 成品规格。
+  # 图片内容安全：prompt 禁政治人物/敏感符号；bl 侧内容审核自带拦截。
+  - id: ww_cover_ai
+    type: dispatch
+    assignee: jingwei
+    description: "封面 AI 出图：用 bailian-gen skill `bl image generate` 按文章内容出图。【prompt 质量标准（用户 2026-09-20 拍板）】：必须先通读文章全文，提炼文章的核心事件与最具辨识度的【具象生活场景】，再写成画面感提示词。标准：prompt 描述的是「一个可以被拍下来的瞬间」，不是抽象概念。参照示例（同口径）：携程酒店刺客文 → 酒店前台接待瞬间的画面（前台、房卡、价目屏）；低保户话题文 → 低保户日常生活的真实场景画面；12306 购票文 → 火车站售票窗口/12306 购票界面场景。禁止抽象词堆砌（如『公平』『制度』『博弈』直接入画）——抽象概念必须转译为具象物（人/物/场所/动作）。中文 ≤120 字，禁出现文字/字母/品牌 logo 要求（出图模型文字渲染不可靠，封面文字由后续文字叠加保证）。权威标题一律取卡 body「权威标题」字段做文字叠加，禁止自行取题。生成后用 PIL 将权威标题文字叠加到底图安全区（复用现有 cover 文字盒逻辑），输出 cover-900x383-<instance>.png（精确 900×383，PIL 实测）。生成图先落 ai-cover-raw-<instance>.png，文字叠加后另存最终 cover 文件名（原始 AI 图保留便于重试）。bl 失败/超时(>3min)/额度异常 → 降级沿用旧 PIL 封面路径，不阻塞。产物 slug 含 ww-cover-report，报告须附所用 prompt 全文并注明 AI 图 or 降级图。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    artifact: "./exchange/artifacts/*-ww-cover-report*.md"
+    slug: ww-cover-report   # 历史契约显式声明（E1：产物名 ww-cover-report 与步 id cover-ai 不同构，声明即文档化豁免）
+    max_retry: 1
+    on_fail: ww_layout        # 失败回排版步用旧路径重做封面
+    next: ww_check_render
+
+  # ---- C4 渲染完整性校验（013 Δ9/P1 根治：排版后上传前机器校验）----
+  - id: ww_check_render
+    type: check
+    description: "渲染完整性机器校验：formatted.html 占位词零命中 + 每张 img 本地实存>1KB + 封面 900×383 规格实测（PIL）。FAIL→on_fail 回配图排版步注单；超 max_retry escalate（013 Δ9）"
+    target: ww_layout
+    # t_caa2bc28 根治：rules 按阶段取子集（引擎 _do_check 真实消费）。
+    # ③img 素材域（wechat_img_domain）不在此判——排版产物按设计是本地路径，
+    # 上传后由 wechat_upload_v3.verify_draft_exists U5④ 兜底 n_mmbiz≥1。
+    rules: [no_placeholder, img_assets_exist, cover_spec, wechat_refs]
+    mode: strict
+    max_retry: 2
+    on_fail: ww_layout
+    next: ww_upload
+
+  # ---- S9 上传草稿箱（收编 wp_upload 幂等逻辑；R1 止步草稿箱）----
+  # A1②（20260920）：title 权威源机械化 + exwrite 占号要求（覆盖原 B3-2）
+  - id: ww_upload
+    type: dispatch
+    assignee: jingwei
+    description: "上传（jingwei-wechat-upload skill）：封面 900×383 传永久素材→draft/add 建草稿→R6 幂等查重。凭证读 wechat-publisher/.env。R1 绝不调群发/发布接口。title 一律取卡内「权威标题」字段（引擎按优先级解析注入：拍板指定候选N > 默认候选1 > polish H1，禁止 worker 自行取题）。禁止从历史 polish 稿 metadata 或 057 类旧稿取 title。禁止 free-form 标题。产物必须走 exwrite 占号（.nnn-claims/NNN.claim + ledger 登记），frontmatter 必含 nnn/title/project/artifact_type/status/version。产物 slug 含 ww-upload-report。产出纪律：产物只写结论与增量：禁止复述上游全文、禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）"
+    max_retry: 2
+    artifact: "./exchange/artifacts/*-ww-upload-report*.md"
+    next: ww_closing_gate
+
+  # ---- 门4 收官门（charter 4 门之四：收官拍板）----
+  # D1（20260920）：此门永不默认（user 专属）——收官拍板永不自动，
+  # user 拍板后引擎自动归档成果区（066 §8），自动拍会绕过 user 终审。
+  - id: ww_closing_gate
+    type: decision
+    question: "收官确认：草稿已入草稿箱。同意 → 本期完成；回退 → 退回排版"
+    options:
+      - {key: A, label: "确认收官", next: ww_done}
+      - {key: 同意, label: "确认收官", next: ww_done}
+      - {key: B, label: "回退修改", next: ww_layout}
+    on_reject: ww_layout
+    next: ww_done
+
+  - id: ww_done
+    type: done
+    description: "本期写作流程完成"
+
+# 每步模型路由（T6：model_router 读此段 → 卡 model_override + 日志记录实际路由）
+# 未列出的步骤走 assignee profile 默认模型。
+# Δ7 禁配：load_class=audit 的步骤，provider 解析链不得含 minimax（1027 输出风控）。
+models:
+  ww_write: {provider: deepseek, model: deepseek-v4-pro}
+  ww_polish: {provider: qwen, model: qwen3.8-max}
+  ww_factcheck: {provider: minimax, model: abab6.5s-chat, fallback: [{provider: deepseek, model: deepseek-chat}]}
+  ww_review_audit: {provider: deepseek, model: deepseek-chat}
+
+# 负载分类（Δ7）：audit 类步骤 deny_providers 命中即顺延 fallback，全部禁配拒派。
+load_classes:
+  audit:
+    deny_providers: [minimax]
+    reason: "MiniMax safety filter 1027 输出风控：审查/核查负载上下文含违禁词样本，禁配（P7/L-4）"
+
+# 步骤↔skill 绑定（Δ6 v2 格式：条目={skill, owner}；owner 是解析路径唯一依据，
+# 同名多份缺 owner → validate 拒启。卡 body 注入带 owner 段解析路径）
+skills_map:
+  ww_topic: [{skill: athena-topic-scout, owner: athena}]
+  # E2（玄武 064 建议 + user 拍板）：五路素材 skill 声明式绑定
+  ww_mat_news: [{skill: web-research, owner: jingwei}]
+  ww_mat_history: [{skill: AI-reads-books-page-by-page, owner: default}]
+  ww_mat_classic: [{skill: obsidian-knowledge-weaving, owner: athena}]
+  ww_mat_law: [{skill: legal-article-retrieval, owner: xuanwu}, {skill: legal-norm-validity-check, owner: xuanwu}]
+  ww_mat_econ: [{skill: hv-analysis, owner: duanmu}]
+  ww_write: [{skill: duanmu-gzh-writer, owner: duanmu}, {skill: no-ai-slop, owner: duanmu}]
+  ww_polish: [{skill: humanizer-zh, owner: duanmu}, {skill: no-ai-slop, owner: duanmu}]
+  ww_factcheck: [{skill: blog-factcheck, owner: xuanwu}]
+  ww_headline: [{skill: baokuan-title-generator, source: engine}]
+  ww_review_audit: [{skill: xuanwu-content-audit, owner: xuanwu}, {skill: yuwen-publish-precheck, owner: xuanwu}]
+  # 逻辑审（问题清单 #4）：三审末位，hermes 执行
+  ww_logic_review: [{skill: hermes-logic-review, owner: hermes}]
+  ww_layout: [{skill: athena-article-illustrator, owner: athena}, {skill: gzh-design, owner: athena}]
+  # G-9 已闭环：jingwei-wechat-upload 已注册（jingwei owner 目录 + skills-shared 可达），M4 恢复绑定。
+  ww_upload: [{skill: jingwei-wechat-upload, owner: jingwei}]

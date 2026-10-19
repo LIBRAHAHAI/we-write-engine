@@ -1,0 +1,240 @@
+# history-narrative.yaml — 历史讲述模板（005 需求1；2026-09-26 完善态设计，去 skeleton）
+# 硬约束：史实分层溯源（正史/出土/论文），演义与史实明确分离。
+# 发布链路：面向公众号 → 排版+上传+收官门与主产线同构。
+name: history-narrative
+title: "历史讲述写作流水线"
+description: >-
+  历史讲述模板：以叙事笔法讲一段史实/一个历史人物。史实核查是硬约束——
+  每处史实陈述可溯源（正史/出土/论文分层标注），演义与史实明确分离。
+  步骤链：选题 → 选题门 → 史料核查 → 叙事结构 → 大纲门 → 成文 →
+  事实核查 → 逻辑审 → 合规审 → 终稿门 → 排版 → 上传 → 收官门。
+max_iterations: 60
+
+decision_defaults:
+  hn_gate_topic: A
+  hn_gate_outline: A
+
+steps:
+  # ---- S0 选题（雅典娜）----
+  - id: hn_topic
+    type: dispatch
+    assignee: athena
+    description: >-
+      选题：候选历史事件/人物≥3 个，各带史料丰度初判（正史有传/出土材料/
+      近人研究充分度）、大众兴趣点、与当下议题的呼应角度。避免敏感历史
+      定性争议选题（涉民族/宗教/近现代定性未决者优先排除并在产物注明）。
+      产物 slug 含 hn-topic。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-hn-topic*.md"
+    next: hn_gate_topic
+
+  - id: hn_gate_topic
+    type: decision
+    question: "选题拍板：选定本期讲述对象（A=默认首选）"
+    context_files:
+      - "./exchange/artifacts/*-hn-topic*.md"
+    options:
+      - {key: A, label: "选定首选", next: hn_research}
+      - {key: B, label: "重选", next: hn_topic}
+    on_reject: hn_topic
+    next: hn_research
+
+  # ---- S1 史料核查（玄武）----
+  - id: hn_research
+    type: dispatch
+    assignee: xuanwu
+    description: >-
+      史料核查：核心史实逐条溯源，三层标注——A层正史/出土材料（可直引）、
+      B层近人考据论文（注明考据者）、C层传说演义（只可作叙事素材须声明）。
+      每条记 {史实陈述, 层级, 出处(书名/卷次或URL), 存疑标注}。有争议处
+      并列诸说。达标=覆盖大纲所需全部关键史实；预算耗尽带缺口说明交付。
+      本地知识库（zjflibra 历史类藏书）可用 AI-reads-books-page-by-page 精读。
+      产物 slug 含 hn-research。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-hn-research*.md"
+    next: hn_outline
+
+  # ---- S2 叙事结构（端木出骨架+雅典娜优化，串行单步）----
+  - id: hn_outline
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      叙事结构：时间线梳理 + 讲述切口（从哪个瞬间进入）+ 悬念布点 +
+      史实/演义分离标注方案（哪些段落是 C 层素材、如何向读者声明）。
+      结构参照 LOCK/三幕节奏，1500-3000 字量级。产物 slug 含 hn-outline。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-hn-outline*.md"
+    next: hn_gate_outline
+
+  - id: hn_gate_outline
+    type: decision
+    question: "叙事结构拍板：同意定稿进成文；驳回退回"
+    context_files:
+      - "./exchange/artifacts/*-hn-outline*.md"
+    options:
+      - {key: A, label: "结构定稿，进入成文", next: hn_write}
+      - {key: 同意, label: "结构定稿，进入成文", next: hn_write}
+      - {key: B, label: "驳回重做", next: hn_outline}
+    on_reject: hn_outline
+    next: hn_write
+
+  # ---- S3 成文（端木）----
+  - id: hn_write
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      成文：叙事笔法讲述，史实引用标 [src:N] 对应 hn-research 溯源表；
+      演义想象处显性标注（如「传说」「演义里」措辞或文末声明），禁止把
+      C 层素材写成史实口吻。术×道风格。产物 slug 含 hn-draft。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-hn-draft*.md"
+    slug: hn-draft
+    next: hn_factcheck
+
+  # ---- S4 事实核查（玄武）----
+  - id: hn_factcheck
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      史实核查：对 hn-draft 全部 [src:N] 逐条判定——①出处真实存在 ②陈述
+      与出处一致（人名/年代/官职/地名）③层级标注正确（C 层不得以史实口吻
+      呈现）④争议处是否并列诸说。产物 hn-factcheck frontmatter 契约字段
+      factcheck_result: approved|changes_requested。FAIL→打回 hn_write。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-hn-factcheck*.md"
+    verdict_consume:
+      field: factcheck_result
+      pass_value: approved
+      on_reject: hn_write
+    max_retry: 2
+    next: hn_logic
+
+  # ---- S5 逻辑审（hermes）----
+  - id: hn_logic
+    type: dispatch
+    assignee: default
+    description: >-
+      逻辑审（hermes-logic-review skill）：L1 主旨（这段历史到底想说什么，
+      一句话可述）、L2 叙事线与论证线是否互相支撑（叙事归叙事、观点归观点，
+      不混淆）、L3 以古喻今的推理链（类比是否成立/高频谬误：以今度古、
+      单因归因）。只审逻辑不动史实。产物 hn-logic frontmatter 契约字段
+      logic_result: approved|changes_requested。FAIL→打回 hn_write。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-hn-logic*.md"
+    slug: hn-logic
+    verdict_consume:
+      field: logic_result
+      pass_value: approved
+      on_reject: hn_write
+    max_retry: 2
+    next: hn_audit
+
+  # ---- S6 合规审（玄武）----
+  - id: hn_audit
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      合规审：历史虚无主义红线（不得歪曲/丑化/否定英烈与重大历史定论）、
+      民族宗教表述审慎、引擎词库扫描复核。产物 hn-audit frontmatter 契约
+      字段 audit_result: approved|changes_requested。FAIL→打回 hn_write。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-hn-audit*.md"
+    slug: hn-audit
+    verdict_consume:
+      field: audit_result
+      pass_value: approved
+      on_reject: hn_write
+    max_retry: 2
+    next: hn_gate_final
+
+  # ---- 门3：终稿拍板（user 专属）----
+  - id: hn_gate_final
+    type: decision
+    question: "终稿拍板：史实核/逻辑审/合规审 verdict 已齐。A=通过进排版；C|意见=带意见返工；B=驳回退回成文"
+    context_files:
+      - "./exchange/artifacts/*-hn-draft*.md"
+      - "./exchange/artifacts/*-hn-factcheck*.md"
+      - "./exchange/verdicts/*-hn-logic*.md"
+      - "./exchange/verdicts/*-hn-audit*.md"
+    options:
+      - {key: A, label: "终稿通过，进配图排版", next: hn_layout}
+      - {key: 同意, label: "终稿通过，进配图排版", next: hn_layout}
+      - {key: C, label: "带修改意见返工（决策文件写 C|意见）", next: hn_write}
+      - {key: B, label: "驳回，退回成文", next: hn_write}
+    on_reject: hn_write
+    next: hn_layout
+
+  # ---- S7 配图排版（雅典娜）----
+  - id: hn_layout
+    type: dispatch
+    assignee: athena
+    description: >-
+      配图排版：历史场景信息图/时间线图（athena-article-illustrator；历史
+      人物画像须用公认传世画像或纯示意图，禁 AI 生成以假乱真的「历史照片」
+      风格图）+ gzh-design MD→微信HTML。产物 slug 含 hn-layout。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-hn-layout*.md"
+    next: hn_archive
+
+  # ---- S7 成品归档（精卫）----
+  # 2026-09-26 user 规则：所有成果统一落 Wechat-project/<模板名>/<写作日期>/
+  - id: hn_archive
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      成品归档：终稿+史料溯源表+叙事结构归档到
+      Wechat-project/history-narrative/<写作日期YYYY-MM-DD>/
+      <实例名>/（final.md 终稿 / sources.md 史料分层溯源表 / outline.md
+      叙事结构 / formatted.html 排版稿 / imgs/ 配图目录整体 /
+      sources.json 素材来源索引——引擎归档清单 ⑤⑥ 对齐，016 #7）。
+      归档与模式无关（test/live 都归档）。归档后逐文件回读验证实存
+      （禁自报 done）。产物 slug 含 hn-archive，报告列归档路径清单。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-hn-archive*.md"
+    max_retry: 2
+    next: hn_upload
+
+  # ---- S8 上传草稿箱（精卫）----
+  # 模式门控由引擎机械保证：test → MOCK 短路（*_upload 后缀规则）零触碰
+  # 微信 API；live → 真入公众号草稿箱（R1 绝不调群发/发布接口）。
+  - id: hn_upload
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      上传（jingwei-wechat-upload skill）：封面传永久素材→draft/add 建草稿→
+      幂等查重。R1 绝不调群发/发布接口。test 模式引擎自动 mock 短路（不触
+      微信 API）；live 模式真入草稿箱。产物 slug 含 hn-upload。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-hn-upload*.md"
+    max_retry: 2
+    next: hn_closing_gate
+
+  # ---- 门4 收官门（user 专属）----
+  - id: hn_closing_gate
+    type: decision
+    question: "收官确认：草稿已入草稿箱。同意 → 本期完成；回退 → 退回排版"
+    options:
+      - {key: A, label: "确认收官", next: hn_done}
+      - {key: 同意, label: "确认收官", next: hn_done}
+      - {key: B, label: "回退修改", next: hn_layout}
+    on_reject: hn_layout
+    next: hn_done
+
+  - id: hn_done
+    type: done
+    description: "本期历史讲述流程完成"
+
+skills_map:
+  hn_topic: [{skill: athena-topic-scout, owner: athena}]
+  hn_research: [{skill: AI-reads-books-page-by-page, owner: jingwei}, {skill: web-research, owner: jingwei}]
+  hn_outline: [{skill: duanmu-gzh-writer, owner: duanmu}, {skill: plot-structure, owner: duanmu}]
+  hn_write: [{skill: duanmu-gzh-writer, owner: duanmu}, {skill: no-ai-slop, owner: duanmu}, {skill: baokuan-title-generator, source: engine}]
+  hn_factcheck: [{skill: blog-factcheck, owner: xuanwu}]
+  hn_logic: [{skill: hermes-logic-review, owner: hermes}]
+  hn_audit: [{skill: xuanwu-content-audit, owner: xuanwu}, {skill: yuwen-publish-precheck, owner: xuanwu}]
+  hn_layout: [{skill: athena-article-illustrator, owner: athena}, {skill: gzh-design, owner: athena}]
+  hn_upload: [{skill: jingwei-wechat-upload, owner: jingwei}]
+load_classes:
+  audit:
+    deny_providers: [minimax]
+    reason: "MiniMax 1027 输出风控：审查负载上下文含违禁词样本"

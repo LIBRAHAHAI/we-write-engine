@@ -1,0 +1,260 @@
+# finance-analysis.yaml — 财经分析模板（005 需求1；2026-09-26 完善态设计，去 skeleton）
+# 设计依据：hot-topic-commentary 已验证范式（artifact glob slug 同构 / skills_map owner
+# 可达 / verdict 机器契约 / 保守 decision_defaults）。skill 绑定全部过 install-gate 或
+# 本地既有，路径经 check_skill_paths.py 实测可达。
+# 发布链路：财经文面向公众号 → 保留 排版+上传+收官门（与主产线同构）。
+name: finance-analysis
+title: "财经分析写作流水线"
+description: >-
+  财经分析文章模板：围绕一个财经事件/数据/政策，做数据核实、归因分析与
+  大众向解读。步骤链：选题（事件+数据面）→ 选题门 → 数据核实与图表素材 →
+  归因分析 → 大纲门 → 写文 → 事实核查 → 逻辑审 → 合规审 → 终稿门 →
+  排版 → 上传草稿箱 → 收官门。
+max_iterations: 60
+
+# 保守默认（同主产线口径）：仅选题/大纲两类低风险门默认 A；
+# 终稿门与收官门永不默认（user 专属）。消费前提=实例 opt-in（面板「预设默认」）。
+decision_defaults:
+  fa_gate_topic: A
+  fa_gate_outline: A
+
+steps:
+  # ---- S0 选题（雅典娜）----
+  - id: fa_topic
+    type: dispatch
+    assignee: athena
+    description: >-
+      选题：财经事件抓取与初判——候选事件≥3 个，各带核心数据点、时效窗口、
+      大众兴趣理由与数据可得性预判（有官方统计口径/财报可查者加分）。
+      知乎同题舆情可用 zhihu search（chinese-content-reading skill 第二部分）预扫。
+      产物 slug 含 fa-topic。产出纪律：产物只写结论与增量：禁止复述上游全文、
+      禁止过程性流水账、增量返工只写改动点清单（对照 fix_hint 逐条）。
+    artifact: "./exchange/artifacts/*-fa-topic*.md"
+    next: fa_gate_topic
+
+  # ---- 门1：选题拍板 ----
+  - id: fa_gate_topic
+    type: decision
+    question: "选题拍板：从候选事件中选 1 个进入数据核实（A=默认首选）"
+    context_files:
+      - "./exchange/artifacts/*-fa-topic*.md"
+    options:
+      - {key: A, label: "选定首选事件，进入数据核实", next: fa_data}
+      - {key: B, label: "驳回重选", next: fa_topic}
+    on_reject: fa_topic
+    next: fa_data
+
+  # ---- S1 数据核实与素材（玄武）----
+  # token 纪律同主产线：≤5 轮检索/≤20 分钟/≥3 条达标即停；预算耗尽带缺口说明交付。
+  - id: fa_data
+    type: dispatch
+    assignee: xuanwu
+    description: >-
+      数据核实与素材：核心数据逐条溯源（官方口径优先：统计局/央行/财报原文 >
+      财经媒体转述），每条数据记 {数值, 时点, 来源URL, 口径说明}；上市公司数据
+      用 earnings-recap 方法取实际/预期对比。整理图表素材清单与口径说明。
+      达标=≥3 条可溯源数据；预算耗尽带缺口说明交付，禁止无休止搜集。
+      产物 slug 含 fa-data。产出纪律：只写结论与增量，禁止复述上游全文。
+    artifact: "./exchange/artifacts/*-fa-data*.md"
+    next: fa_analysis
+
+  # ---- S2 归因分析（端木）----
+  - id: fa_analysis
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      归因分析：横纵分析法拆多层原因（直接诱因/结构因素/长期背景），
+      区分事实归因与观点推断，形成分析主线与论证骨架（矛盾分析：谁受益/
+      谁承担/什么在转化）。产物 slug 含 fa-analysis。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-fa-analysis*.md"
+    next: fa_outline
+
+  # ---- S3 大纲（端木）----
+  - id: fa_outline
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      大纲：以归因主线成文结构（钩子/数据呈现节奏/术语降维点/结语），
+      1500-2500 字量级、引言+3节+结语骨架，引用标注 [src:N] 规划。
+      产物 slug 含 fa-outline。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-fa-outline*.md"
+    next: fa_gate_outline
+
+  # ---- 门2：大纲拍板 ----
+  - id: fa_gate_outline
+    type: decision
+    question: "大纲拍板：同意定稿进写文；驳回退回大纲"
+    context_files:
+      - "./exchange/artifacts/*-fa-outline*.md"
+    options:
+      - {key: A, label: "大纲定稿，进入写文", next: fa_write}
+      - {key: 同意, label: "大纲定稿，进入写文", next: fa_write}
+      - {key: B, label: "驳回重做", next: fa_outline}
+    on_reject: fa_outline
+    next: fa_write
+
+  # ---- S4 写文（端木）----
+  - id: fa_write
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      写文：按大纲成文（1500-2500字），数据引用逐条标 [src:N] 对应 fa-data
+      溯源表，术语必须配大众化解释，术×道风格。金融合规红线：不得构成投资
+      建议（不荐股/不预测点位/风险提示到位）。产物 slug 含 fa-draft。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-fa-draft*.md"
+    slug: fa-draft
+    next: fa_factcheck
+
+  # ---- S5 事实核查（玄武）----
+  - id: fa_factcheck
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      事实核查：对 fa-draft 全部 [src:N] 逐条四判定——①URL 可达 ②引用页可定位
+      ③数值/年份/口径与源一致 ④时效（财经数据必须标时点；政策法规核现行
+      有效版本）。可达性失败标 UNVERIFIABLE 进终稿门警示清单，不直接 FAIL。
+      产物 fa-factcheck frontmatter 契约字段 factcheck_result:
+      approved|changes_requested。FAIL→引擎打回 fa_write 注清单。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-fa-factcheck*.md"
+    verdict_consume:
+      field: factcheck_result
+      pass_value: approved
+      on_reject: fa_write
+    max_retry: 2
+    next: fa_logic
+
+  # ---- S6 逻辑审（hermes，三审末位同构）----
+  - id: fa_logic
+    type: dispatch
+    assignee: default
+    description: >-
+      逻辑审（hermes-logic-review skill）：以不懂前因后果的读者视角三层检查——
+      L1 主旨与框架、L2 层间与段落自洽（归因链是否跳跃）、L3 推理链（财经文
+      高频谬误：相关当因果/幸存者样本/基期操纵）。只审逻辑不动事实。
+      产物 fa-logic frontmatter 契约字段 logic_result: approved|changes_requested。
+      FAIL→引擎打回 fa_write。产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-fa-logic*.md"
+    slug: fa-logic
+    verdict_consume:
+      field: logic_result
+      pass_value: approved
+      on_reject: fa_write
+    max_retry: 2
+    next: fa_audit
+
+  # ---- S7 合规审（玄武）----
+  - id: fa_audit
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      合规审：引擎词库扫描（finance/ad_law 词表）命中复核 + 投资建议红线
+      （荐股/收益承诺/误导性预测）+ 语义类检查。产物 fa-audit frontmatter
+      契约字段 audit_result: approved|changes_requested。FAIL→打回 fa_write。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-fa-audit*.md"
+    slug: fa-audit
+    verdict_consume:
+      field: audit_result
+      pass_value: approved
+      on_reject: fa_write
+    max_retry: 2
+    next: fa_gate_final
+
+  # ---- 门3：终稿拍板（user 专属，永不默认）----
+  - id: fa_gate_final
+    type: decision
+    question: "终稿拍板：事实核/逻辑审/合规审 verdict 已齐。A=通过进排版；C|修改意见=带意见返工；B=驳回退回写文"
+    context_files:
+      - "./exchange/artifacts/*-fa-draft*.md"
+      - "./exchange/artifacts/*-fa-factcheck*.md"
+      - "./exchange/verdicts/*-fa-logic*.md"
+      - "./exchange/verdicts/*-fa-audit*.md"
+    options:
+      - {key: A, label: "终稿通过，进配图排版", next: fa_layout}
+      - {key: 同意, label: "终稿通过，进配图排版", next: fa_layout}
+      - {key: C, label: "带修改意见返工（决策文件写 C|意见）", next: fa_write}
+      - {key: B, label: "驳回，退回写文", next: fa_write}
+    on_reject: fa_write
+    next: fa_layout
+
+  # ---- S8 配图排版（雅典娜）----
+  - id: fa_layout
+    type: dispatch
+    assignee: athena
+    description: >-
+      配图排版：数据图表配图（athena-article-illustrator 信息图方案，数据图
+      必须与 fa-data 溯源表一致）+ gzh-design MD→微信HTML（样式全内联）。
+      产物 slug 含 fa-layout。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-fa-layout*.md"
+    next: fa_archive
+
+  # ---- S8 成品归档（精卫）----
+  # 2026-09-26 user 规则：所有成果统一落 Wechat-project/<模板名>/<写作日期>/
+  - id: fa_archive
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      成品归档：终稿+数据溯源表+归因分析归档到
+      Wechat-project/finance-analysis/<写作日期YYYY-MM-DD>/
+      <实例名>/（final.md 终稿 / data-sources.md 溯源表 / analysis.md
+      归因主线 / formatted.html 排版稿 / imgs/ 配图目录整体 /
+      sources.json 素材来源索引——引擎归档清单 ⑤⑥ 对齐，016 #7）。
+      归档与模式无关（test/live 都归档）。归档后逐文件回读验证实存
+      （禁自报 done）。产物 slug 含 fa-archive，报告列归档路径清单。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-fa-archive*.md"
+    max_retry: 2
+    next: fa_upload
+
+  # ---- S9 上传草稿箱（精卫）----
+  # 模式门控由引擎机械保证：test → MOCK 短路（*_upload 后缀规则）零触碰
+  # 微信 API；live → 真入公众号草稿箱（R1 绝不调群发/发布接口）。
+  - id: fa_upload
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      上传（jingwei-wechat-upload skill）：封面传永久素材→draft/add 建草稿→
+      幂等查重。凭证读 wechat-publisher/.env。R1 绝不调群发/发布接口。
+      test 模式引擎自动 mock 短路（不触微信 API）；live 模式真入草稿箱。
+      title 取终稿门拍板指定或默认候选。产物 slug 含 fa-upload。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-fa-upload*.md"
+    max_retry: 2
+    next: fa_closing_gate
+
+  # ---- 门4 收官门（user 专属，永不默认）----
+  - id: fa_closing_gate
+    type: decision
+    question: "收官确认：草稿已入草稿箱。同意 → 本期完成；回退 → 退回排版"
+    options:
+      - {key: A, label: "确认收官", next: fa_done}
+      - {key: 同意, label: "确认收官", next: fa_done}
+      - {key: B, label: "回退修改", next: fa_layout}
+    on_reject: fa_layout
+    next: fa_done
+
+  - id: fa_done
+    type: done
+    description: "本期财经分析流程完成"
+
+# 步骤↔skill 绑定（全部实测路径可达：owner 目录或 skills-shared）
+skills_map:
+  fa_topic: [{skill: athena-topic-scout, owner: athena}, {skill: wewrite-topic, owner: duanmu}]
+  fa_data: [{skill: earnings-recap, owner: xuanwu}, {skill: web-research, owner: jingwei}]
+  fa_analysis: [{skill: hv-analysis, owner: duanmu}]
+  fa_outline: [{skill: duanmu-gzh-writer, owner: duanmu}]
+  fa_write: [{skill: duanmu-gzh-writer, owner: duanmu}, {skill: no-ai-slop, owner: duanmu}, {skill: baokuan-title-generator, source: engine}]
+  fa_factcheck: [{skill: blog-factcheck, owner: xuanwu}]
+  fa_logic: [{skill: hermes-logic-review, owner: hermes}]
+  fa_audit: [{skill: xuanwu-content-audit, owner: xuanwu}, {skill: yuwen-publish-precheck, owner: xuanwu}]
+  fa_layout: [{skill: athena-article-illustrator, owner: athena}, {skill: gzh-design, owner: athena}]
+  fa_upload: [{skill: jingwei-wechat-upload, owner: jingwei}]
+# 审查类负载禁配（与主产线 Δ7 同构）
+load_classes:
+  audit:
+    deny_providers: [minimax]
+    reason: "MiniMax 1027 输出风控：审查负载上下文含违禁词样本"

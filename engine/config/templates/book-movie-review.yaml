@@ -1,0 +1,242 @@
+# book-movie-review.yaml — 读书观影模板（005 需求1；2026-09-26 完善态设计，去 skeleton）
+# 核心纪律：引用页码/时间戳可回查，避免剧透关键转折。
+# 书路走 weread-skills（微信读书网关：热门划线/点评/笔记），影路走 web-research。
+name: book-movie-review
+title: "读书观影评论流水线"
+description: >-
+  读书/观影评论模板：一部作品一篇评论。选品 → 选品门 → 精读/精看笔记 →
+  评论骨架 → 大纲门 → 成文 → 引文核查 → 逻辑审 → 合规审 → 终稿门 →
+  排版 → 上传 → 收官门。核心纪律：引用页码/时间戳可回查，避免剧透关键转折。
+max_iterations: 60
+
+decision_defaults:
+  bm_gate_topic: A
+  bm_gate_outline: A
+
+steps:
+  # ---- S0 选品（雅典娜）----
+  - id: bm_topic
+    type: dispatch
+    assignee: athena
+    description: >-
+      选书/选片：候选≥3 部，各带看点初判（为什么现在值得评）、大众相关性
+      （豆瓣/微信读书热度、与当下议题呼应）、评论角度差异化（知乎同题
+      观点可预扫，避开人云亦云角度）。书类候选用 web-research 查在架/口碑
+      （注：weread /store/search 服务端故障，2026-09-26 精卫定位，选书不走
+      search；书若在 user weread 书架可经 /shelf 取 bookId）。产物 slug 含
+      bm-topic。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-bm-topic*.md"
+    next: bm_gate_topic
+
+  - id: bm_gate_topic
+    type: decision
+    question: "选品拍板：选定本次评论的作品（A=默认首选）"
+    context_files:
+      - "./exchange/artifacts/*-bm-topic*.md"
+    options:
+      - {key: A, label: "选定首选作品", next: bm_notes}
+      - {key: B, label: "重选", next: bm_topic}
+    on_reject: bm_topic
+    next: bm_notes
+
+  # ---- S1 精读/精看笔记（雅典娜）----
+  - id: bm_notes
+    type: dispatch
+    assignee: athena
+    description: >-
+      精读/精看笔记：关键段落/镜头摘录（书带页码或章节、影视带时间戳），
+      提炼 3-5 个评论锚点（每个锚点=观点+文本证据配对）。书路：能拿到
+      bookId（书在 user weread 书架）时用 weread 热门划线/公开点评作参照系
+      （自己观点 vs 大众划线的异同是评论素材）；weread /store/search 故障期
+      拿不到 bookId 则走 AI-reads-books-page-by-page 精读本地知识库藏书或
+      web-research 找权威摘录。影路用 web-research 查权威影评/访谈/幕后。
+      标注潜在剧透点（关键转折/结局）供成文规避。预算：≤20 分钟达标即停。
+      产物 slug 含 bm-notes。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-bm-notes*.md"
+    next: bm_outline
+
+  # ---- S2 评论骨架（端木）----
+  - id: bm_outline
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      评论骨架：以锚点为骨排布行文结构（钩子：从作品最扎人的细节进入；
+      中段：锚点逐一展开，观点+文本证据；结语：作品与读者生活的连接点），
+      规划剧透规避方案（哪些情节只能暗示不能明说），1500-2500 字量级。
+      产物 slug 含 bm-outline。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-bm-outline*.md"
+    next: bm_gate_outline
+
+  - id: bm_gate_outline
+    type: decision
+    question: "骨架拍板：同意定稿进成文；驳回退回"
+    context_files:
+      - "./exchange/artifacts/*-bm-outline*.md"
+    options:
+      - {key: A, label: "骨架定稿，进入成文", next: bm_write}
+      - {key: 同意, label: "骨架定稿，进入成文", next: bm_write}
+      - {key: B, label: "驳回重做", next: bm_outline}
+    on_reject: bm_outline
+    next: bm_write
+
+  # ---- S3 成文（端木）----
+  - id: bm_write
+    type: dispatch
+    assignee: duanmu
+    description: >-
+      成文：以评论锚点为骨，观点+文本证据成文，引文标 [src:N] 对应
+      bm-notes（页码/时间戳可回查），关键剧透按大纲规避方案处理（必要
+      剧透前置「剧透预警」声明）。评的是作品与人的关系，不是内容复述。
+      产物 slug 含 bm-draft。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-bm-draft*.md"
+    slug: bm-draft
+    next: bm_factcheck
+
+  # ---- S4 引文核查（玄武）----
+  - id: bm_factcheck
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      引文核查：对 bm-draft 全部 [src:N] 逐条判定——①引文与原作一致
+      （页码/时间戳可定位）②作品基本信息（作者/导演/出版年/版本）无误
+      ③剧透纪律（未声明的剧透即 FAIL）④引用他人观点处注明出处。
+      产物 bm-factcheck frontmatter 契约字段 factcheck_result:
+      approved|changes_requested。FAIL→打回 bm_write。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-bm-factcheck*.md"
+    verdict_consume:
+      field: factcheck_result
+      pass_value: approved
+      on_reject: bm_write
+    max_retry: 2
+    next: bm_logic
+
+  # ---- S5 逻辑审（hermes）----
+  - id: bm_logic
+    type: dispatch
+    assignee: default
+    description: >-
+      逻辑审（hermes-logic-review skill）：L1 主旨（这篇评论到底在评什么，
+      一句话可述）、L2 锚点与行文自洽（每个观点是否有文本证据支撑，无
+      证据的个人好恶须显性标注为个人口味）、L3 推理链（过度解读/以偏
+      概全/作者意图谬误）。只审逻辑不动引文。产物 bm-logic frontmatter
+      契约字段 logic_result: approved|changes_requested。FAIL→打回 bm_write。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-bm-logic*.md"
+    slug: bm-logic
+    verdict_consume:
+      field: logic_result
+      pass_value: approved
+      on_reject: bm_write
+    max_retry: 2
+    next: bm_audit
+
+  # ---- S6 合规审（玄武）----
+  - id: bm_audit
+    type: dispatch
+    assignee: xuanwu
+    load_class: audit
+    description: >-
+      合规审：引擎词库扫描复核 + 涉真人作品的诽谤/隐私红线（评论对事
+      不对人身）+ 版权纪律（引文长度合理引用范围，不整章搬运）。
+      产物 bm-audit frontmatter 契约字段 audit_result:
+      approved|changes_requested。FAIL→打回 bm_write。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/verdicts/*-bm-audit*.md"
+    slug: bm-audit
+    verdict_consume:
+      field: audit_result
+      pass_value: approved
+      on_reject: bm_write
+    max_retry: 2
+    next: bm_gate_final
+
+  # ---- 门3：终稿拍板（user 专属）----
+  - id: bm_gate_final
+    type: decision
+    question: "终稿拍板：引文核/逻辑审/合规审 verdict 已齐。A=通过进排版；C|意见=带意见返工；B=驳回退回成文"
+    context_files:
+      - "./exchange/artifacts/*-bm-draft*.md"
+      - "./exchange/artifacts/*-bm-factcheck*.md"
+      - "./exchange/verdicts/*-bm-logic*.md"
+      - "./exchange/verdicts/*-bm-audit*.md"
+    options:
+      - {key: A, label: "终稿通过，进配图排版", next: bm_layout}
+      - {key: 同意, label: "终稿通过，进配图排版", next: bm_layout}
+      - {key: C, label: "带修改意见返工（决策文件写 C|意见）", next: bm_write}
+      - {key: B, label: "驳回，退回成文", next: bm_write}
+    on_reject: bm_write
+    next: bm_layout
+
+  # ---- S7 配图排版（雅典娜）----
+  - id: bm_layout
+    type: dispatch
+    assignee: athena
+    description: >-
+      配图排版：作品意象图/金句卡（athena-article-illustrator；封面剧照
+      用官方发布物料，禁盗摄屏摄）+ gzh-design MD→微信HTML。产物 slug 含
+      bm-layout。产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-bm-layout*.md"
+    next: bm_archive
+
+  # ---- S7b 成品归档（精卫）----
+  # 2026-09-26 user 规则：所有成果统一落 Wechat-project/<模板名>/<写作日期>/
+  - id: bm_archive
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      成品归档：终稿+精读笔记+评论骨架归档到
+      Wechat-project/book-movie-review/<写作日期YYYY-MM-DD>/
+      <实例名>/（final.md 终稿 / notes.md 精读笔记含页码时间戳 /
+      outline.md 评论骨架 / formatted.html 排版稿 / imgs/ 配图目录整体 /
+      sources.json 素材来源索引——引擎归档清单 ⑤⑥ 对齐，016 #7）。
+      归档与模式无关（test/live 都归档）。归档后逐文件回读验证实存
+      （禁自报 done）。产物 slug 含 bm-archive，报告列归档路径清单。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-bm-archive*.md"
+    max_retry: 2
+    next: bm_upload
+
+  # ---- S8 上传草稿箱（精卫）----
+  - id: bm_upload
+    type: dispatch
+    assignee: jingwei
+    description: >-
+      上传（jingwei-wechat-upload skill）：封面传永久素材→draft/add 建
+      草稿→幂等查重。R1 绝不调群发/发布接口。产物 slug 含 bm-upload。
+      产出纪律：只写结论与增量。
+    artifact: "./exchange/artifacts/*-bm-upload*.md"
+    max_retry: 2
+    next: bm_closing_gate
+
+  # ---- 门4 收官门（user 专属）----
+  - id: bm_closing_gate
+    type: decision
+    question: "收官确认：草稿已入草稿箱。同意 → 本期完成；回退 → 退回排版"
+    options:
+      - {key: A, label: "确认收官", next: bm_done}
+      - {key: 同意, label: "确认收官", next: bm_done}
+      - {key: B, label: "回退修改", next: bm_layout}
+    on_reject: bm_layout
+    next: bm_done
+
+  - id: bm_done
+    type: done
+    description: "本期读书/观影评论流程完成"
+
+skills_map:
+  bm_topic: [{skill: athena-topic-scout, owner: athena}, {skill: weread-skills, owner: jingwei}]
+  bm_notes: [{skill: weread-skills, owner: jingwei}, {skill: AI-reads-books-page-by-page, owner: jingwei}, {skill: web-research, owner: jingwei}]
+  bm_outline: [{skill: duanmu-gzh-writer, owner: duanmu}, {skill: blind-spot-detective, owner: duanmu}]
+  bm_write: [{skill: duanmu-gzh-writer, owner: duanmu}, {skill: no-ai-slop, owner: duanmu}, {skill: baokuan-title-generator, source: engine}]
+  bm_factcheck: [{skill: blog-factcheck, owner: xuanwu}]
+  bm_logic: [{skill: hermes-logic-review, owner: hermes}]
+  bm_audit: [{skill: xuanwu-content-audit, owner: xuanwu}, {skill: yuwen-publish-precheck, owner: xuanwu}]
+  bm_layout: [{skill: athena-article-illustrator, owner: athena}, {skill: gzh-design, owner: athena}]
+  bm_upload: [{skill: jingwei-wechat-upload, owner: jingwei}]
+
+load_classes:
+  audit:
+    deny_providers: [minimax]
+    reason: "MiniMax 1027 输出风控：审查负载上下文含违禁词样本"
